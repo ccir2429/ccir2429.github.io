@@ -1,0 +1,19 @@
+body{
+    background-color: black;
+    color: white;
+}
+
+a {
+    color: lime;
+    text-decoration: wavy;
+}
+
+header{
+    position: fixed;
+    
+}
+
+header .menu{
+    position: relative;
+    float:right;
+}
