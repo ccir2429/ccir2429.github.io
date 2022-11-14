@@ -9,6 +9,9 @@ a {
     color: lime;
     text-decoration: wavy;
 }
+a:hover{
+    color:green;
+}
 
 header{
     position: fixed;
@@ -23,4 +26,8 @@ header .menu{
 .body{
     position: fixed;
     margin-top: 2em;
+}
+
+ul li{
+    list-style: none;
 }
