@@ -61,4 +61,12 @@ text{
     margin:0;
     padding-bottom: .05rem;
 }
-   
+a img{
+    height: 1rem;
+    padding-left: 0.5rem;
+    display: none;
+    padding-bottom: ;
+}
+a:hover img{
+    display: inline-block;
+} 
