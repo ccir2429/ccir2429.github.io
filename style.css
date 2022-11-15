@@ -29,7 +29,10 @@ header .menu{
     margin-left: 2rem;
     margin-top: 1rem;
 }
-
+.txt{
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+}
 .body{
     position: fixed;
     margin-top: 2em;
