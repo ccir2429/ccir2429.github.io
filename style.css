@@ -4,13 +4,17 @@ body{
     font-family: monospace;
     font-size: 1.5rem;
 }
-
+.body{
+    padding-top: 0.3em;
+    margin-left: 2rem;
+    margin-right: 2rem;
+}
 a {
     color: lime;
     text-decoration: wavy;
 }
 a:hover{
-    color:green;
+    border-bottom: 1px solid limegreen;
 }
 
 header{
@@ -19,8 +23,11 @@ header{
 }
 
 header .menu{
-    position: relative;
+    /* position: relative; */
     float:right;
+    text-align: center;
+    margin-left: 2rem;
+    margin-top: 1rem;
 }
 
 .body{
@@ -28,6 +35,27 @@ header .menu{
     margin-top: 2em;
 }
 
+ul{
+    padding-left: 0rem;
+    margin-left: 0rem;
+}
 ul li{
     list-style: none;
 }
+
+p{
+    margin: 0;
+    padding-bottom: 0.5rem;
+}
+.user{
+ color: purple;
+}
+
+.path{
+ color: cornflowerblue;
+}
+text{
+    margin:0;
+    padding-bottom: .05rem;
+}
+   
