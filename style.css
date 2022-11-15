@@ -18,16 +18,15 @@ a:hover{
 }
 
 header{
-    position: fixed;
-    
+    margin-top:0.5em;
 }
 
 header .menu{
     /* position: relative; */
-    float:right;
-    text-align: center;
+    /* float:right; */
+    text-align:left;
     margin-left: 2rem;
-    margin-top: 1rem;
+    margin-bottom: 0.2em;
 }
 .txt{
     margin-top: 1rem;
