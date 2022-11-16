@@ -39,6 +39,10 @@
             document.addEventListener("keydown", onKeydown);
 
             document.addEventListener('DOMContentLoaded',async function(){
+                gameSpawnChance = 50;
+                playGame = Math.floor(Math.random() * (gameSpawnChance))===0;
+                if(playGame){
+
                 const message = 'Do you want to play a game?(y/n):'
                 dynElement = document.getElementById("dynText");
                 for(let i=0;i<message.length;i++){
@@ -51,7 +55,7 @@
                 htmlstring = '<p><text class="user">anon@home:</text><text class="path"> ~/</text>$ <text class="input"></text><span class="blink">▮</span></p>'
                 container.append(createElementFromHTML(htmlstring))
                 input = document.getElementsByClassName("input")
-                console.log(input.htmlString)
+                }
             },false);
             
             function onKeydown(e){
@@ -84,7 +88,6 @@
                         // Enter key
                         break;
                     default:
-                        console.log(e.keyCode)
                         inputText+=e.key
                     break;
                 }
