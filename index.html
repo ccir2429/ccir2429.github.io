@@ -21,15 +21,88 @@
             <div class="center">
                 <p><text class="user">anon@home:</text><text class="path"> ~/</text>$ ls</p>
                 <ul class="projects">
-                    <li>d-w--r---r--    <a href="projects\MFE\index.html">MachineFingerprintEncryption</a></li>
-                    <li>drwx-rwx-r-x    <a href="https://github.com/ccir2429/aoc2022">Advent of code 2022</a></li>
-                    <li>drw--rw--r--    <a href="https://github.com/ccir2429/ccir2429.github.io">Github personal page</a></li>
-                    <li>d-w---------    <a href="#" class="forbidden">Internal tool</a></li>
-                    <li>drw--rwx-r-x    <a href="https://www.credly.com/badges/73386e67-75ac-470a-a184-c136fe4c642d/public_url">Certified: Azure Developer Associate</a></li>
+                    <li class="linkHolder">d-w--r---r--    <a href="projects\MFE\index.html">MachineFingerprintEncryption</a></li>
+                    <li class="linkHolder">drwx-rwx-r-x    <a href="https://github.com/ccir2429/aoc2022">Advent of code 2022</a></li>
+                    <li class="linkHolder">drw--rw--r--    <a href="https://github.com/ccir2429/ccir2429.github.io">Github personal page</a></li>
+                    <li class="linkHolder">d-w---------    <a href="#" class="forbidden">Internal tool</a></li>
+                    <li class="linkHolder">drw--rwx-r-x    <a href="https://www.credly.com/badges/73386e67-75ac-470a-a184-c136fe4c642d/public_url">Certified: Azure Developer Associate</a></li>
                 </ul>    
-                <p><text class="user">anon@home:</text><text class="path"> ~/</text>$<span class="blink">▮</span></p>
+                <p><text class="user">anon@home:</text><text class="path"> ~/</text>$ <text id="dynText"></text><span class="blink">▮</span></p>
             </div>
         </div>
-        <script src="scripts.js" async defer></script>
+        <script>
+            function createElementFromHTML(htmlString) {
+                var p = document.createElement('p');
+                p.innerHTML = htmlstring;
+                return p.firstChild;
+            }
+            document.addEventListener("keydown", onKeydown);
+
+            document.addEventListener('DOMContentLoaded',async function(){
+                const message = 'Do you want to play a game?(y/n):'
+                dynElement = document.getElementById("dynText");
+                for(let i=0;i<message.length;i++){
+                    dynElement.append(message[i])
+                    await new Promise(r => setTimeout(r, 100));
+                }
+                dynElement.parentElement.removeChild(dynElement.nextElementSibling)
+                await new Promise(r => setTimeout(r, 500));
+                container = document.getElementsByClassName("center")[0]
+                htmlstring = '<p><text class="user">anon@home:</text><text class="path"> ~/</text>$ <text class="input"></text><span class="blink">▮</span></p>'
+                container.append(createElementFromHTML(htmlstring))
+                input = document.getElementsByClassName("input")
+                console.log(input.htmlString)
+            },false);
+            
+            function onKeydown(e){
+                var KeyID = e.keyCode;
+                switch(KeyID)
+                {
+                    case 8:
+                    case 46:
+                        inputText = inputText.slice(0,-1)
+                    break;
+                    case 9:
+                    case 12:
+                    case 16:
+                    case 17:
+                    case 18:
+                    case 20:
+                    case 27:
+                    case 33:
+                    case 34:
+                    case 35:
+                    case 36:
+                    case 37:
+                    case 38:
+                    case 39:
+                    case 40:
+                    case 45:
+                    case 144:
+                        break;
+                    case 13:
+                        // Enter key
+                        break;
+                    default:
+                        console.log(e.keyCode)
+                        inputText+=e.key
+                    break;
+                }
+                input = document.getElementsByClassName('input')[0];
+                if(input){
+                    if(input.firstChild){
+                        input.firstChild.replaceWith(inputText)
+                    }
+                    else{
+                        input.append(inputText)
+                    }
+                }
+                else{
+                    inputText=""
+                }
+            }
+            inputText = "";
+            
+        </script>
     </body>
-</html>
+</html>[]
