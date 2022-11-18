@@ -8,7 +8,7 @@ document.addEventListener("keydown", onKeydown);
 document.addEventListener('DOMContentLoaded',async function(){
     gameSpawnChance = 0;
     rnd = Math.floor(Math.random() * (gameSpawnChance))
-    playGame = rnd%2 ==0;
+    playGame = false//rnd%2 ==0;
     if(playGame){
         await WriteMessage('Do you want to play a game?(y/n):');
         AddNewLine()
