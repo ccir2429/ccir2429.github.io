@@ -6,27 +6,38 @@ function createElementFromHTML(htmlString) {
 document.addEventListener("keydown", onKeydown);
 
 document.addEventListener('DOMContentLoaded',async function(){
-    gameSpawnChance = 10;
+    gameSpawnChance = 0;
     rnd = Math.floor(Math.random() * (gameSpawnChance))
-    playGame = rnd%2 ===0;
+    playGame = rnd%2 ==0;
     if(playGame){
-
-    const message = 'Do you want to play a game?(y/n):'
-    dynElement = document.getElementById("dynText");
-    for(let i=0;i<message.length;i++){
-        dynElement.append(message[i])
-        await new Promise(r => setTimeout(r, 100));
-    }
-    dynElement.parentElement.removeChild(dynElement.nextElementSibling)
-    await new Promise(r => setTimeout(r, 500));
-    container = document.getElementsByClassName("center")[0]
-    htmlstring = '<p><text class="user">anon@home:</text><text class="path"> ~/</text>$ <text class="input"></text><span class="blink">▮</span></p>'
-    container.append(createElementFromHTML(htmlstring))
-    input = document.getElementsByClassName("input")
+        await WriteMessage('Do you want to play a game?(y/n):');
+        AddNewLine()
+        // input = document.getElementsByClassName("input")
     }
 },false);
 
-function onKeydown(e){
+function AddNewLine(){
+    container = document.getElementsByClassName("center")[0]
+    htmlstring = '<p><text class="user">anon@home:</text><text class="path"> ~/</text>$ <text id="dynText"class="input"></text><span class="blink">▮</span></p>'
+    container.append(createElementFromHTML(htmlstring))
+}
+
+canWrite = true
+async function WriteMessage(message){
+    if(canWrite) {
+        canWrite = false
+        dynElement = document.getElementById("dynText");
+        for(let i=0;i<message.length;i++){
+            dynElement.append(message[i])
+            await new Promise(r => setTimeout(r, 100));
+        }
+        dynElement.parentElement.removeChild(dynElement.nextElementSibling)
+        dynElement.removeAttribute('id');
+        await new Promise(r => setTimeout(r, 500));
+        canWrite = true
+    }   
+}
+async function onKeydown(e){
     var KeyID = e.keyCode;
     switch(KeyID)
     {
@@ -54,6 +65,8 @@ function onKeydown(e){
             break;
         case 13:
             // Enter key
+            // await WriteMessage('The game is not ready yet. Visit me another time to play')
+            // AddNewLine()
             break;
         default:
             inputText+=e.key
