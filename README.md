@@ -1,2 +1,2 @@
-# VirtualCard
- all tech related about me
+# Virtual Portfolio
+To website: http://cosmacosmin.com
