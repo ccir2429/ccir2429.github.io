@@ -5,6 +5,22 @@ function createElementFromHTML(htmlString) {
 }
 document.addEventListener("keydown", onKeydown);
 
+function testRequest(){
+
+    fetch('https://api.igdb.com/v4/age_ratings', {
+  method: 'POST',
+  headers: {
+    'Client-ID': '38uhqll1la3ww9qfii6labx5hk56ys',
+    'Authorization': 'Bearer baogiwysnyqs03h6nz21fq0vd9wkgo',
+    'Accept': 'application/json',
+    'Content-Type': 'application/x-www-form-urlencoded'
+  },
+  body: 'fields category,checksum,content_descriptions,rating,rating_cover_url,synopsis;'
+}).then((response) => response.json())
+.then((json) => console.log(json));
+
+}
+
 document.addEventListener('DOMContentLoaded',async function(){
     gameSpawnChance = 0;
     rnd = Math.floor(Math.random() * (gameSpawnChance))
@@ -14,6 +30,10 @@ document.addEventListener('DOMContentLoaded',async function(){
         AddNewLine()
         // input = document.getElementsByClassName("input")
     }
+
+    
+    console.log("Please ignore the mess. I'm workin' here!");
+    testRequest();
 },false);
 
 function AddNewLine(){
