@@ -11,7 +11,7 @@ function testRequest(){
   method: 'POST',
   headers: {
     'Client-ID': '38uhqll1la3ww9qfii6labx5hk56ys',
-    'Authorization': 'Bearer baogiwysnyqs03h6nz21fq0vd9wkgo',
+    'Authorization': 'Bearer m4l3ee4kl4uud8ymdqg01npstszqro',
     'Accept': 'application/json',
     'Content-Type': 'application/x-www-form-urlencoded'
   },
