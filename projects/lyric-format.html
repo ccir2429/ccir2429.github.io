@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lyrics formatter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0a1216;
+    --panel: #0f1a20;
+    --panel-2: #14232a;
+    --panel-3: #1a2d36;
+    --line: #22353e;
+    --line-strong: #325260;
+    --text: #d6e6ea;
+    --muted: #86a0a9;
+    --accent: #46d9ef;
+    --accent-soft: rgba(70, 217, 239, 0.14);
+    --accent-glow: rgba(70, 217, 239, 0.35);
+    --warn: #ffb454;
+    --warn-soft: rgba(255, 180, 84, 0.13);
+    --ui: "Geist", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); height: 100%; }
+  *, *::before, *::after { box-sizing: inherit; }
+  body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font-family: var(--ui); font-size: 14px; line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .app { height: 100%; display: flex; flex-direction: column; }
+
+  .top {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--line); background: var(--panel);
+  }
+  .brand { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; margin: 0; }
+  .spacer { flex: 1 1 auto; }
+
+  .btn {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 7px 14px;
+    transition: border-color .15s, background .15s, transform .05s;
+  }
+  .btn:hover:not(:disabled) { border-color: var(--accent); background: var(--panel-3); }
+  .btn:active:not(:disabled) { transform: translateY(1px); }
+  .btn:disabled { opacity: .4; cursor: default; }
+  .btn.ghost { background: transparent; }
+  .btn.primary {
+    background: var(--accent); border-color: var(--accent); color: #06181d; font-weight: 600;
+    padding-left: 22px; padding-right: 22px;
+  }
+  .btn.primary:hover:not(:disabled) { background: #7ae6f6; border-color: #7ae6f6; }
+
+  .work { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 12px; padding: 16px 18px 12px; }
+
+  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+  .controls label { color: var(--muted); }
+  .field {
+    background: var(--bg); border: 1px solid var(--line-strong); border-radius: 6px;
+    padding: 7px 10px; min-width: 0;
+  }
+  select.field { max-width: 100%; }
+  .field:hover { border-color: var(--accent); }
+  .field:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+  .structure { display: flex; flex-direction: column; gap: 6px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; max-height: 92px; overflow-y: auto; }
+  .chip {
+    border: 1px solid; border-radius: 999px; padding: 3px 12px; font-size: 12.5px;
+    background: transparent; transition: background .15s;
+  }
+  .chip.verse { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+  .chip.chorus { border-color: var(--warn); color: var(--warn); background: var(--warn-soft); }
+  .chip.other { border-color: var(--line-strong); color: var(--muted); background: var(--panel-2); }
+  .chip.added { border-style: dashed; }
+  .chip:hover { background: var(--panel-3); }
+  .legend { margin: 0; color: var(--muted); font-size: 12.5px; }
+
+  .ed-wrap {
+    flex: 1 1 auto; min-height: 0; display: flex;
+    border: 1px solid var(--line); border-radius: 10px; background: var(--panel);
+    transition: border-color .2s;
+  }
+  .ed-wrap:focus-within { border-color: var(--line-strong); }
+  .ed-wrap.flash { animation: flash .6s ease-out; }
+  @keyframes flash {
+    from { box-shadow: 0 0 0 3px var(--accent-glow), 0 0 28px var(--accent-glow); border-color: var(--accent); }
+  }
+  textarea {
+    flex: 1 1 auto; width: 100%; min-height: 0;
+    resize: none; border: 0; background: transparent;
+    padding: 18px 20px;
+    font-family: var(--mono); font-size: 14.5px; line-height: 1.7;
+    caret-color: var(--accent); border-radius: 10px;
+  }
+  textarea:focus { outline: none; }
+  textarea::placeholder { color: var(--muted); opacity: .85; }
+  ::selection { background: rgba(70, 217, 239, 0.32); }
+
+  .help { color: var(--muted); font-size: 13px; }
+  .help summary { cursor: pointer; color: var(--text); width: fit-content; }
+  .help ul { margin: 8px 0 0; padding-left: 20px; max-width: 78ch; }
+  .help li { margin: 3px 0; }
+
+  .status {
+    display: flex; flex-wrap: wrap; gap: 6px 22px; align-items: center;
+    padding: 8px 18px; border-top: 1px solid var(--line);
+    background: var(--panel); color: var(--muted); font-size: 12.5px;
+  }
+  .status .note { color: var(--text); flex: 1 1 320px; min-width: 0; }
+  .status .note.err { color: var(--warn); }
+  .status .stat { white-space: nowrap; }
+  .status .stat b { color: var(--text); font-weight: 500; font-variant-numeric: tabular-nums; }
+
+  @media (max-width: 720px) {
+    .app { height: auto; min-height: 100%; }
+    .ed-wrap { min-height: 55vh; }
+    .controls .field { flex: 1 1 200px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <h1 class="brand">Lyrics formatter</h1>
+    <span class="spacer"></span>
+    <button class="btn ghost" id="example">Load example</button>
+    <button class="btn ghost" id="undo" disabled>Undo</button>
+    <button class="btn ghost" id="clear">Clear</button>
+  </header>
+
+  <section class="work">
+    <div class="controls">
+      <label for="enc">Encoding</label>
+      <select class="field" id="enc" aria-label="Encoding"></select>
+      <button class="btn primary" id="process" title="Process (Ctrl+Enter)">Process</button>
+      <button class="btn" id="copy">Copy</button>
+    </div>
+
+    <div class="structure" id="structure" hidden>
+      <div class="chips" id="chips" role="group" aria-label="Song structure. Select a section to highlight it."></div>
+      <p class="legend" id="legend"></p>
+    </div>
+
+    <div class="ed-wrap" id="edWrap">
+      <textarea id="ed" spellcheck="false" aria-label="Lyrics"
+        placeholder="Paste the song lyrics here, choose an encoding, then press Process.&#10;&#10;The formatted song replaces this text, ready to copy."></textarea>
+    </div>
+
+    <details class="help">
+      <summary>How the lyrics are read</summary>
+      <ul>
+        <li>Blocks separated by a blank line are sections. Verse numbers such as 1. or 2) are removed.</li>
+        <li>A section labeled Refren, Cor or Chorus is the chorus. If there are numbered verses and an unlabeled section, that section is the chorus.</li>
+        <li>With no numbers or labels, a section that appears more than once is the chorus.</li>
+        <li>The chorus is placed after every verse. If it already follows every verse, nothing is added.</li>
+        <li>Sections are separated by a line containing ---.</li>
+      </ul>
+    </details>
+  </section>
+
+  <footer class="status">
+    <span class="note" id="note" role="status" aria-live="polite">Ready. Paste lyrics to begin.</span>
+    <span class="stat"><b id="sChars">0</b> characters</span>
+    <span class="stat"><b id="sLines">0</b> lines</span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const ed = $("ed"), sel = $("enc"), noteEl = $("note");
+  const SEP = "\n---\n";
+
+  /* ================================================================== */
+  /* Encodings                                                           */
+  /* ================================================================== */
+  const ENCODINGS = [
+    { id: "utf8", label: "UTF-8 (keep every character)", kind: "unicode" },
+    { id: "ro-plain", label: "Romanian without diacritics (\u0103\u2192a, \u021B\u2192t, \u00C2\u2192A)", kind: "romanian" },
+    { id: "windows-1250", label: "Windows-1250 (Central European)", kind: "legacy", decoder: "windows-1250" },
+    { id: "iso-8859-2", label: "ISO-8859-2 (Latin-2)", kind: "legacy", decoder: "iso-8859-2" },
+    { id: "iso-8859-16", label: "ISO-8859-16 (Romanian)", kind: "legacy", decoder: "iso-8859-16" },
+    { id: "windows-1252", label: "Windows-1252 (Western European)", kind: "legacy", decoder: "windows-1252" },
+    { id: "ascii", label: "ASCII (plain letters only)", kind: "ascii" }
+  ];
+
+  // Romanian letters with no diacritic (both comma-below and cedilla forms)
+  const ROMANIAN_PLAIN = {
+    "\u0103": "a", "\u0102": "A", "\u00E2": "a", "\u00C2": "A", "\u00EE": "i", "\u00CE": "I",
+    "\u0219": "s", "\u0218": "S", "\u021B": "t", "\u021A": "T",
+    "\u015F": "s", "\u015E": "S", "\u0163": "t", "\u0162": "T"
+  };
+  const COMMA_TO_CEDILLA = { "\u0219": "\u015F", "\u0218": "\u015E", "\u021B": "\u0163", "\u021A": "\u0162" };
+  const CEDILLA_TO_COMMA = { "\u015F": "\u0219", "\u015E": "\u0218", "\u0163": "\u021B", "\u0162": "\u021A" };
+  const PUNCT = {
+    "\u2018": "'", "\u2019": "'", "\u201A": "'", "\u201B": "'",
+    "\u201C": '"', "\u201D": '"', "\u201E": '"',
+    "\u2013": "-", "\u2014": "-", "\u2026": "...", "\u2022": "-",
+    "\u00A0": " ", "\u200B": "", "\uFEFF": ""
+  };
+
+  function isSupported(enc) {
+    if (!enc.decoder) return true;
+    try { new TextDecoder(enc.decoder); return true; } catch (e) { return false; }
+  }
+
+  const repCache = {};
+  function repertoire(enc) {
+    if (repCache[enc.id]) return repCache[enc.id];
+    let fn;
+    if (enc.kind === "ascii") {
+      fn = (c) => { const cp = c.codePointAt(0); return cp === 9 || cp === 10 || (cp >= 32 && cp < 127); };
+    } else {
+      const set = new Set(["\t", "\n"]);
+      const dec = new TextDecoder(enc.decoder);
+      for (let b = 32; b < 256; b++) {
+        const ch = dec.decode(new Uint8Array([b]));
+        const cp = ch.codePointAt(0);
+        if (ch.length === 1 && cp !== 0xFFFD && !(cp >= 0x7F && cp <= 0x9F)) set.add(ch);
+      }
+      fn = (c) => set.has(c);
+    }
+    repCache[enc.id] = fn;
+    return fn;
+  }
+
+  function fallbackChar(ch, ok) {
+    const fits = (s) => Array.from(s).every(ok);
+    const alt = COMMA_TO_CEDILLA[ch] || CEDILLA_TO_COMMA[ch];
+    if (alt && fits(alt)) return alt;
+    if (Object.prototype.hasOwnProperty.call(PUNCT, ch) && fits(PUNCT[ch])) return PUNCT[ch];
+    const base = ch.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    if (base && base !== ch && fits(base)) return base;
+    return "?";
+  }
+
+  // Converts text so it only contains characters the chosen encoding can hold.
+  function convert_encoding(text, enc) {
+    text = text.normalize("NFC");
+    const changes = {};
+    const record = (a, b) => { const k = a + "\u2192" + b; changes[k] = (changes[k] || 0) + 1; };
+    if (enc.kind === "unicode") return { text, changes };
+    let out = "";
+    if (enc.kind === "romanian") {
+      for (const ch of text) {
+        const r = ROMANIAN_PLAIN[ch];
+        if (r) { out += r; record(ch, r); } else out += ch;
+      }
+      return { text: out, changes };
+    }
+    const ok = repertoire(enc);
+    for (const ch of text) {
+      if (ok(ch)) { out += ch; continue; }
+      const r = fallbackChar(ch, ok);
+      out += r;
+      record(ch, r === "" ? "(removed)" : r);
+    }
+    return { text: out, changes };
+  }
+
+  /* ================================================================== */
+  /* Reading the lyrics                                                  */
+  /* ================================================================== */
+  const RE_BRACKET = /^[\[(]\s*([^\])]{1,24}?)\s*[\])]\s*(.*)$/;
+  const RE_CHORUS_WORD = /^(?:refren(?:ul)?|chorus)\b\s*\d{0,2}\s*(?:x\s*\d+\s*)?[:.)\-\u2013]?\s*/i;
+  const RE_CHORUS_SHORT = /^(?:cor|ref|r)\s*\d{0,2}\s*(?:[:.)]\s*|$)/i;
+  const RE_OTHER = /^(?:bridge|pod|punte|interludiu|interlude|intro|outro)\s*\d{0,2}\s*(?:[:.)\-\u2013]\s*|$)/i;
+  const RE_VERSE_WORD = /^(?:strofa|strof\u0103|verse|vers)\s*\d{1,2}\s*[:.)\-\u2013]?\s*/i;
+  const RE_VERSE_V = /^v\s*\d{1,2}\s*(?:[:.)\-\u2013]\s*|$)/i;
+  const RE_VERSE_NUM = /^\d{1,2}\s*[.):\-\u2013]\s*(?!\d)/;
+  const RE_ONLY_NUM = /^\d{1,2}$/;
+
+  function classify_inner(inner) {
+    if (/^(?:refren(?:ul)?|chorus|cor|ref|r)\s*\d{0,2}(?:\s*x\s*\d+)?$/i.test(inner)) return "chorus";
+    if (/^(?:(?:strofa|strof\u0103|verse|vers|v)\s*)?\d{1,2}$/i.test(inner)) return "verse";
+    if (/^(?:bridge|pod|punte|interludiu|interlude|intro|outro)\s*\d{0,2}$/i.test(inner)) return "other";
+    return null;
+  }
+
+  function detect_label(line) {
+    let m;
+    if ((m = line.match(RE_BRACKET))) {
+      const k = classify_inner(m[1]);
+      if (k) return { kind: k, rest: m[2].trim() };
+    }
+    if ((m = line.match(RE_CHORUS_WORD)) || (m = line.match(RE_CHORUS_SHORT))) return { kind: "chorus", rest: line.slice(m[0].length).trim() };
+    if ((m = line.match(RE_OTHER))) return { kind: "other", rest: line.slice(m[0].length).trim() };
+    if ((m = line.match(RE_VERSE_WORD)) || (m = line.match(RE_VERSE_V)) || (m = line.match(RE_VERSE_NUM)) || (m = line.match(RE_ONLY_NUM))) {
+      return { kind: "verse", rest: line.slice(m[0].length).trim() };
+    }
+    return null;
+  }
+
+  const keyOf = (lines) =>
+    lines.join(" ").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+
+  function parse_lyrics(raw) {
+    const lines = raw.replace(/\r\n?/g, "\n").replace(/[\u00A0\u200B\uFEFF]/g, " ").split("\n");
+    const groups = [];
+    let cur = [];
+    const cut = () => { if (cur.length) { groups.push(cur); cur = []; } };
+    lines.forEach((l) => {
+      if (/^\s*$/.test(l) || /^\s*[-\u2013\u2014_=*]{3,}\s*$/.test(l)) cut();
+      else cur.push(l.trim().replace(/[ \t]{2,}/g, " "));
+    });
+    cut();
+
+    const blocks = [];
+    let pending = null, labelsRemoved = 0;
+    groups.forEach((g) => {
+      let kind = null;
+      if (g.length >= 2 && g.every((l) => RE_VERSE_NUM.test(l))) {
+        // every line is numbered: strip the line numbers
+        g = g.map((l) => l.replace(RE_VERSE_NUM, "").trim()).filter(Boolean);
+        labelsRemoved += g.length;
+        kind = "verse";
+      } else {
+        const lab = detect_label(g[0]);
+        if (lab) {
+          kind = lab.kind;
+          labelsRemoved++;
+          if (lab.rest) g[0] = lab.rest; else g.shift();
+        }
+      }
+      if (!g.length) { pending = kind || pending; return; }
+      if (!kind && pending) kind = pending;
+      pending = null;
+      blocks.push({ kind, lines: g });
+    });
+    return { blocks, labelsRemoved };
+  }
+
+  function classify_blocks(blocks) {
+    const V = blocks.filter((b) => b.kind === "verse").length;
+    const C = blocks.filter((b) => b.kind === "chorus").length;
+    const un = blocks.filter((b) => !b.kind);
+    if (!un.length) return;
+    if (V > 0 && C === 0) { un.forEach((b) => { b.kind = "chorus"; }); }
+    else if (V > 0 || C > 0) { un.forEach((b) => { b.kind = "verse"; }); }
+    else {
+      const count = {};
+      blocks.forEach((b) => { b.key = keyOf(b.lines); count[b.key] = (count[b.key] || 0) + 1; });
+      un.forEach((b) => { b.kind = b.key && count[b.key] > 1 ? "chorus" : "verse"; });
+    }
+  }
+
+  // Puts the chorus after every verse that is not already followed by one.
+  function place_chorus(blocks) {
+    const first = blocks.find((b) => b.kind === "chorus") || null;
+    const out = [];
+    let current = null, added = 0;
+    blocks.forEach((b, i) => {
+      out.push(b);
+      if (b.kind === "chorus") current = b;
+      if (b.kind === "verse") {
+        const next = blocks[i + 1];
+        if (next && next.kind === "chorus") return;
+        const ch = current || first;
+        if (ch) { out.push({ kind: "chorus", lines: ch.lines, added: true }); added++; }
+      }
+    });
+    return { blocks: out, added };
+  }
+
+  /* ================================================================== */
+  /* process_text                                                        */
+  /* ================================================================== */
+  function process_text(lyrics, encId) {
+    const enc = ENCODINGS.find((e) => e.id === encId) || ENCODINGS[0];
+    const parsed = parse_lyrics(lyrics.normalize("NFC"));
+    const src = parsed.blocks;
+    classify_blocks(src);
+    const nVerses = src.filter((b) => b.kind === "verse").length;
+    const nChorus = src.filter((b) => b.kind === "chorus").length;
+    const placed = place_chorus(src);
+
+    const changes = {};
+    let text = "", offset = 0;
+    placed.blocks.forEach((b, i) => {
+      const r = convert_encoding(b.lines.join("\n"), enc);
+      Object.keys(r.changes).forEach((k) => { changes[k] = (changes[k] || 0) + r.changes[k]; });
+      if (i) { text += SEP; offset += SEP.length; }
+      b.start = offset;
+      text += r.text;
+      offset += r.text.length;
+      b.end = offset;
+    });
+
+    // summary line
+    const plural = (n, one, many) => n + " " + (n === 1 ? one : many);
+    let s = "Found " + plural(nVerses, "verse", "verses") + (nChorus ? " and " + plural(nChorus, "chorus", "choruses") : "") + ".";
+    if (!nChorus) s += " No chorus was detected. Label it Refren or Chorus, or repeat it, so it can follow each verse.";
+    else if (placed.added) s += " Added the chorus after " + plural(placed.added, "verse", "verses") + ".";
+    else s += " The chorus already follows every verse, so none was added.";
+    if (parsed.labelsRemoved) s += " Numbers and labels removed.";
+
+    const total = Object.keys(changes).reduce((n, k) => n + changes[k], 0);
+    if (enc.kind === "romanian") {
+      s += " " + (total ? "Removed the diacritics from " + plural(total, "character", "characters") + "." : "No Romanian diacritics found.");
+    } else if (enc.kind !== "unicode") {
+      const top = Object.entries(changes).sort((a, b) => b[1] - a[1]).slice(0, 4)
+        .map(([k, n]) => k + (n > 1 ? " \u00D7" + n : "")).join(", ");
+      s += " " + enc.label.split(" (")[0] + ": " + (total ? plural(total, "character", "characters") + " replaced (" + top + (Object.keys(changes).length > 4 ? ", ..." : "") + ")." : "every character fits, nothing replaced.");
+    }
+    return { text, blocks: placed.blocks, added: placed.added, summary: s, empty: placed.blocks.length === 0 };
+  }
+
+  /* ================================================================== */
+  /* UI                                                                  */
+  /* ================================================================== */
+  const KEY = "lyricsformatter:v1";
+  const undoStack = [];
+  let lastBlocks = null;
+  let saveTimer = null;
+
+  ENCODINGS.forEach((e) => {
+    const o = document.createElement("option");
+    o.value = e.id;
+    o.textContent = e.label;
+    if (!isSupported(e)) { o.disabled = true; o.textContent += " (not supported in this browser)"; }
+    sel.appendChild(o);
+  });
+
+  function note(msg, isErr) {
+    noteEl.textContent = msg;
+    noteEl.classList.toggle("err", !!isErr);
+  }
+  function flash() {
+    const w = $("edWrap");
+    w.classList.remove("flash");
+    void w.offsetWidth;
+    w.classList.add("flash");
+  }
+  function refresh() {
+    const v = ed.value;
+    $("sChars").textContent = Array.from(v).length.toLocaleString("en-US");
+    $("sLines").textContent = (v ? v.split("\n").length : 0).toLocaleString("en-US");
+    $("undo").disabled = undoStack.length === 0;
+  }
+  function save() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      try { localStorage.setItem(KEY, JSON.stringify({ doc: ed.value, enc: sel.value })); } catch (e) { /* ignore */ }
+    }, 400);
+  }
+  function hideStructure() { lastBlocks = null; $("structure").hidden = true; }
+
+  function renderStructure(res) {
+    const chips = $("chips");
+    chips.innerHTML = "";
+    let v = 0;
+    res.blocks.forEach((b, i) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "chip " + b.kind + (b.added ? " added" : "");
+      btn.dataset.i = i;
+      btn.textContent = b.kind === "verse" ? "Verse " + (++v) : b.kind === "chorus" ? "Chorus" : "Section";
+      chips.appendChild(btn);
+    });
+    $("legend").textContent = res.added ? "Dashed sections are choruses that were added. Select a section to find it in the text." : "Select a section to find it in the text.";
+    $("structure").hidden = false;
+  }
+
+  $("chips").addEventListener("click", (e) => {
+    const b = e.target.closest("button.chip");
+    if (!b || !lastBlocks) return;
+    const blk = lastBlocks[Number(b.dataset.i)];
+    if (!blk) return;
+    ed.focus();
+    ed.setSelectionRange(blk.start, blk.end);
+    const ratio = blk.start / Math.max(1, ed.value.length);
+    ed.scrollTop = Math.max(0, ratio * ed.scrollHeight - ed.clientHeight * 0.35);
+  });
+
+  function onProcess() {
+    const raw = ed.value;
+    if (!raw.trim()) { note("Paste some lyrics first.", true); return; }
+    const res = process_text(raw, sel.value);
+    if (res.empty) { note("Could not find any lyrics to process.", true); return; }
+    undoStack.push(raw);
+    ed.value = res.text;
+    lastBlocks = res.blocks;
+    renderStructure(res);
+    note(res.summary);
+    refresh(); save(); flash();
+  }
+  $("process").addEventListener("click", onProcess);
+  ed.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); onProcess(); }
+  });
+
+  ed.addEventListener("input", () => { hideStructure(); refresh(); save(); });
+  sel.addEventListener("change", () => { save(); note("Encoding set to " + sel.options[sel.selectedIndex].text.split(" (")[0] + ". Press Process to apply it."); });
+
+  $("undo").addEventListener("click", () => {
+    if (!undoStack.length) return;
+    ed.value = undoStack.pop();
+    hideStructure(); refresh(); save();
+    note("Restored the previous text.");
+  });
+  $("clear").addEventListener("click", () => {
+    if (!ed.value) { note("The text box is already empty."); return; }
+    undoStack.push(ed.value);
+    ed.value = "";
+    hideStructure(); refresh(); save();
+    note("Cleared. Undo brings the text back.");
+    ed.focus();
+  });
+
+  const EXAMPLE = [
+    "1.",
+    "Am pornit la drum de diminea\u021B\u0103",
+    "Cu speran\u021B\u0103 \u0219i cu inima curat\u0103",
+    "Soarele m\u0103-nt\u00E2mpin\u0103 pe cale",
+    "\u0218i m\u0103 cheam\u0103 c\u0103tre z\u0103ri senine",
+    "",
+    "Refren:",
+    "\u021Aine-m\u0103 de m\u00E2n\u0103, Doamne, \u021Bine-m\u0103",
+    "Prin furtuni \u0219i prin lumin\u0103, \u021Bine-m\u0103",
+    "",
+    "2.",
+    "Seara vine lin peste p\u0103m\u00E2nt",
+    "Pa\u0219ii mei se-opresc \u00EEn lini\u0219te",
+    "Stelele aprind o cale nou\u0103",
+    "\u0218i \u00EEmi \u0219optesc c\u0103 nu sunt singur",
+    "",
+    "3.",
+    "C\u00E2nd va fi s\u0103 chem \u00EEn zori de zi",
+    "Vocea ta va r\u0103spunde-n v\u00E2nt",
+    "M\u00E2na ta m\u0103 poart\u0103 mai departe",
+    "\u00CEn c\u00E2ntarea mea r\u0103m\u00E2i"
+  ].join("\n");
+
+  $("example").addEventListener("click", () => {
+    if (ed.value) undoStack.push(ed.value);
+    ed.value = EXAMPLE;
+    hideStructure(); refresh(); save(); flash();
+    note("Loaded an example with numbered verses and one chorus. Press Process to format it.");
+  });
+
+  const copyBtn = $("copy");
+  let copyTimer = null;
+  function copied() {
+    note("Copied " + Array.from(ed.value).length.toLocaleString("en-US") + " characters.");
+    copyBtn.textContent = "Copied";
+    clearTimeout(copyTimer);
+    copyTimer = setTimeout(() => { copyBtn.textContent = "Copy"; }, 1600);
+  }
+  copyBtn.addEventListener("click", async () => {
+    const t = ed.value;
+    if (!t) { note("There is nothing to copy yet.", true); return; }
+    try { await navigator.clipboard.writeText(t); copied(); }
+    catch (err) {
+      try {
+        const s = ed.selectionStart, e = ed.selectionEnd;
+        ed.select();
+        const ok = document.execCommand("copy");
+        ed.setSelectionRange(s, e);
+        if (!ok) throw new Error("copy failed");
+        copied();
+      } catch (err2) { note("Copying is blocked here. Click in the text box, press Ctrl+A, then Ctrl+C.", true); }
+    }
+  });
+
+  /* boot */
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) {
+      const d = JSON.parse(raw);
+      if (typeof d.doc === "string") ed.value = d.doc;
+      if (d.enc && Array.from(sel.options).some((o) => o.value === d.enc && !o.disabled)) sel.value = d.enc;
+    }
+  } catch (e) { /* storage unavailable */ }
+  refresh();
+})();
+</script>
+</body>
+</html>
