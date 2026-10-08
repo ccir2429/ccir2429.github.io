@@ -21,14 +21,23 @@ button{cursor:pointer}
 .row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 .row input{flex:1 1 140px;min-width:0}
 #msg{flex:3 1 220px}
-textarea{flex:1;resize:none;width:100%;background:var(--field);color:inherit;border:1px solid var(--line);border-radius:4px;padding:10px;font:inherit}
+#banner{display:flex;gap:10px;align-items:flex-start;background:#ffcf33;color:#1d1600;border:2px solid #b88a00;border-radius:4px;padding:10px 12px;margin-bottom:10px;font-weight:700}
+#banner[hidden]{display:none}
+#banner span{flex:1;overflow-wrap:anywhere}
+#banner button{background:transparent;border:0;font-size:20px;line-height:1;padding:0 4px;color:inherit}
+#rep{max-height:120px;overflow:auto;margin-top:10px;border-left:3px solid var(--line);padding-left:10px;font-size:14px}
+#rep[hidden]{display:none}
+#rep div{margin-bottom:4px;overflow-wrap:anywhere}
+textarea{min-height:120px;flex:1;resize:none;width:100%;background:var(--field);color:inherit;border:1px solid var(--line);border-radius:4px;padding:10px;font:inherit}
 </style>
 </head>
 <body>
 <main>
   <h1>Notițe rapide</h1>
   <p id="st" aria-live="polite">Se conectează…</p>
+  <div id="banner" role="alert" hidden><span id="btxt"></span><button id="bx" aria-label="Închide bannerul">×</button></div>
   <textarea id="t" readonly aria-label="Notițe rapide, doar citire"></textarea>
+  <div id="rep" hidden aria-live="polite"></div>
   <div class="row">
     <input type="text" id="nick" maxlength="40" placeholder="Poreclă (opțional)" aria-label="Poreclă">
     <input type="password" id="key" placeholder="Cheie de scriere" autocomplete="off" aria-label="Cheie de scriere">
@@ -73,6 +82,7 @@ const ls={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set
 $('nick').value=ls.get('v_nick');$('key').value=ls.get('v_key');
 $('nick').addEventListener('change',()=>ls.set('v_nick',$('nick').value.trim()));
 $('key').addEventListener('change',()=>ls.set('v_key',$('key').value.trim()));
+let cid=ls.get('v_cid');if(!cid){cid=Array.from(crypto.getRandomValues(new Uint8Array(12)),x=>(x%36).toString(36)).join('');ls.set('v_cid',cid)}
 async function send(){
   const m=$('msg').value.trim(),k=$('key').value.trim(),n=$('nick').value.trim()||'Anonim';
   if(!DB){ss.textContent='Lipsește dbUrl în config.js.';return}
@@ -82,12 +92,34 @@ async function send(){
   const id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);
   $('send').disabled=true;
   try{
-    const r=await fetch(DB+'/notes/inbox/'+k+'/'+id+'.json',{method:'PUT',body:JSON.stringify({n,m,at:Date.now()})});
-    if(r.ok){$('msg').value='';ss.textContent='Trimis.'}
-    else ss.textContent=(r.status===401||r.status===403)?'Cheie de scriere greșită.':'Eroare la trimitere ('+r.status+').';
+    const r=await fetch(DB+'/notes/inbox/'+k+'/'+id+'.json',{method:'PUT',body:JSON.stringify({n,m,c:cid,at:Date.now()})});
+    if(r.ok){$('msg').value='';ss.textContent='Trimis.';listenOut()}
+    else{const body=(await r.text()).slice(0,150);ss.textContent='Eroare '+r.status+': '+body+(r.status===401?' (cheia nu se potrivește cu cea din regulile Firebase)':'')}
   }catch(e){ss.textContent='Fără conexiune.'}
   $('send').disabled=false;
 }
+/* mesaje de la echipă */
+let esAll=null,esTo=null,lastBanner='',shown=new Set();
+function listenOut(){
+  const k=$('key').value.trim();
+  if(esAll){esAll.close();esAll=null}if(esTo){esTo.close();esTo=null}
+  if(!DB||!KEYOK.test(k))return;
+  esAll=new EventSource(DB+'/notes/out/'+k+'/all.json');
+  esAll.addEventListener('put',e=>{try{const d=JSON.parse(e.data).data;
+    if(d&&typeof d.m==='string'){if(d.id!==lastBanner){lastBanner=d.id||'';$('btxt').textContent=d.m;$('banner').hidden=false}}
+    else{lastBanner='';$('banner').hidden=true}}catch(x){}});
+  esTo=new EventSource(DB+'/notes/out/'+k+'/to/'+cid+'.json');
+  const onTo=e=>{try{const m=JSON.parse(e.data),list=[];
+    if(m.path==='/'){if(m.data&&typeof m.data==='object')for(const id in m.data)list.push([id,m.data[id]])}
+    else if(m.data&&typeof m.data==='object')list.push([m.path.slice(1),m.data]);
+    list.sort((a,b)=>(a[1].at||0)-(b[1].at||0));
+    for(const [id,x] of list){if(shown.has(id)||typeof x.m!=='string')continue;shown.add(id);
+      const d=document.createElement('div');d.textContent='Echipă: '+x.m;$('rep').appendChild(d);$('rep').hidden=false;$('rep').scrollTop=$('rep').scrollHeight}}catch(x){}};
+  ['put','patch'].forEach(ev=>esTo.addEventListener(ev,onTo));
+}
+$('bx').onclick=()=>{$('banner').hidden=true};
+$('key').addEventListener('change',listenOut);
+listenOut();
 $('send').onclick=send;
 $('msg').addEventListener('keydown',e=>{if(e.key==='Enter')send()});
 </script>
