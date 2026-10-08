@@ -3,32 +3,31 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Notițe rapide (doar citire)</title>
+<title>Notițe rapide și chat</title>
 <style>
-:root{--bg:#e8ecef;--panel:#fff;--ink:#16212a;--mute:#5b6a76;--line:#c9d2d9;--field:#f5f7f9}
-@media (prefers-color-scheme:dark){:root{--bg:#12181d;--panel:#1b242b;--ink:#e6ecf0;--mute:#8a9aa6;--line:#2f3c46;--field:#141b20}}
+:root{--bg:#e8ecef;--panel:#fff;--ink:#16212a;--mute:#5b6a76;--line:#c9d2d9;--field:#f5f7f9;--acc:#1b4fd6}
+@media (prefers-color-scheme:dark){:root{--bg:#12181d;--panel:#1b242b;--ink:#e6ecf0;--mute:#8a9aa6;--line:#2f3c46;--field:#141b20;--acc:#4a78f0}}
 *{box-sizing:border-box}
 html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,sans-serif;padding:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom))}
-main{display:flex;flex-direction:column;height:100%;max-width:900px;margin:0 auto;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px}
+main{display:flex;flex-direction:column;height:100%;max-width:900px;margin:0 auto;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px;overflow:auto}
 h1{font-size:18px;margin:0}
+h2{font-size:15px;margin:14px 0 6px}
 p{margin:2px 0 8px;color:var(--mute);font-size:13px}
-form{display:flex;gap:8px;margin-top:10px}
-input{flex:1;min-width:0;background:var(--field);color:inherit;border:1px solid var(--line);border-radius:4px;padding:8px 10px;font:inherit}
-button{font:inherit;color:inherit;background:var(--field);border:1px solid var(--line);border-radius:4px;padding:8px 14px;cursor:pointer}
-input,button{font:inherit;color:inherit;background:var(--field);border:1px solid var(--line);border-radius:4px;padding:8px 10px}
+input,button,textarea{font:inherit;color:inherit;background:var(--field);border:1px solid var(--line);border-radius:4px;padding:8px 10px}
 button{cursor:pointer}
-.row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-.row input{flex:1 1 140px;min-width:0}
-#msg{flex:1 1 220px}
+textarea{flex:1;min-height:110px;resize:none;width:100%}
+.row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.row input{flex:1 1 160px;min-width:0}
 #banner{display:flex;gap:10px;align-items:flex-start;background:#ffcf33;color:#1d1600;border:2px solid #b88a00;border-radius:4px;padding:10px 12px;margin-bottom:10px;font-weight:700}
-#banner[hidden]{display:none}
+#banner[hidden],#room[hidden],#lock[hidden]{display:none}
 #banner span{flex:1;overflow-wrap:anywhere}
 #banner button{background:transparent;border:0;font-size:20px;line-height:1;padding:0 4px;color:inherit}
-#rep{max-height:120px;overflow:auto;margin-top:10px;border-left:3px solid var(--line);padding-left:10px;font-size:14px}
-#rep[hidden]{display:none}
-#rep div{margin-bottom:4px;overflow-wrap:anywhere}
-textarea{min-height:120px;flex:1;resize:none;width:100%;background:var(--field);color:inherit;border:1px solid var(--line);border-radius:4px;padding:10px;font:inherit}
+#cv{max-height:35vh;min-height:90px;overflow:auto;background:var(--field);border:1px solid var(--line);border-radius:4px;padding:6px}
+.bub{max-width:85%;width:fit-content;padding:5px 10px;border-radius:10px;margin:4px 0;overflow-wrap:anywhere;background:var(--line)}
+.bub.me{background:var(--acc);color:#fff;margin-left:auto}
+.bub small{display:block;opacity:.75;font-size:11px}
+#chat{flex:none}
 </style>
 </head>
 <body>
@@ -37,96 +36,126 @@ textarea{min-height:120px;flex:1;resize:none;width:100%;background:var(--field);
   <p id="st" aria-live="polite">Se conectează…</p>
   <div id="banner" role="alert" hidden><span id="btxt"></span><button id="bx" aria-label="Închide bannerul">×</button></div>
   <textarea id="t" readonly aria-label="Notițe rapide, doar citire"></textarea>
-  <div id="rep" hidden aria-live="polite"></div>
-  <div class="row">
-    <input type="text" id="msg" maxlength="500" placeholder="Scrie un mesaj pentru echipă" aria-label="Mesaj">
-    <button id="send">Trimite</button>
-  </div>
-  <details id="set" style="margin-top:8px"><summary>Setări (poreclă și cheie)</summary>
-    <div class="row">
-      <input type="text" id="nick" maxlength="40" placeholder="Poreclă (opțional)" aria-label="Poreclă">
-      <input type="password" id="key" placeholder="Cheie de scriere" autocomplete="off" aria-label="Cheie de scriere">
+
+  <section id="chat">
+    <h2>Chat cu echipa</h2>
+    <div id="lock">
+      <p>Notițele se văd fără parolă. Pentru a scrie în chat, introdu parola echipei.</p>
+      <div class="row">
+        <input type="password" id="pw" placeholder="Parola echipei" autocomplete="off" aria-label="Parola echipei">
+        <button id="enter">Intră în chat</button>
+      </div>
     </div>
-  </details>
-  <p id="ss" aria-live="polite" style="margin:6px 0 0"></p>
-  <form id="f">
-    <input id="m" maxlength="500" placeholder="Scrie o informație pentru aplicația principală" autocomplete="off" aria-label="Mesaj">
-    <button type="submit">Trimite</button>
-  </form>
-  <p id="ms" aria-live="polite" style="margin:6px 0 0"></p>
+    <div id="room" hidden>
+      <div id="cv" role="log" aria-live="polite" aria-label="Conversația ta cu echipa"></div>
+      <div class="row">
+        <input type="text" id="msg" maxlength="500" placeholder="Scrie un mesaj pentru echipă" aria-label="Mesaj">
+        <button id="send">Trimite</button>
+      </div>
+      <details id="set" style="margin-top:8px"><summary>Poreclă</summary>
+        <div class="row"><input type="text" id="nick" maxlength="40" placeholder="Poreclă (opțional)" aria-label="Poreclă"></div>
+      </details>
+    </div>
+    <p id="ss" aria-live="polite" style="margin-top:6px"></p>
+  </section>
 </main>
 <script src="config.js"></script>
 <script>
+const $=id=>document.getElementById(id);
 const DB=((window.CFG&&CFG.dbUrl)||'').replace(/\/+$/,'');
-const t=document.getElementById('t'),st=document.getElementById('st');
-if(!DB){st.textContent='Lipsește dbUrl în config.js.'}
-else{
-  const es=new EventSource(DB+'/notes/live/text.json');
-  es.addEventListener('put',e=>{
-    try{const m=JSON.parse(e.data);if(m.path==='/'){t.value=typeof m.data==='string'?m.data:'';st.textContent='Live: se actualizează automat'}}catch(x){}
-  });
-  es.onerror=()=>{st.textContent='Conexiune întreruptă, se reconectează…'};
+const PWOK=/^[A-Za-z0-9_-]{8,}$/;
+const mk=st=>({get(k){try{return st.getItem(k)||''}catch(e){return ''}},set(k,v){try{st.setItem(k,v)}catch(e){}}});
+const ls=mk(window.localStorage),ses=mk(window.sessionStorage);
+// identificator unic per sesiune (per filă)
+let cid=ses.get('v_cid');
+if(!cid){cid=Array.from(crypto.getRandomValues(new Uint8Array(12)),x=>(x%36).toString(36)).join('');ses.set('v_cid',cid)}
+const say=m=>{$('ss').textContent=m};
+function applyEv(root,path,data,merge){
+  const seg=path.split('/').filter(Boolean);
+  if(!seg.length){
+    if(merge){for(const k in data){if(data[k]===null)delete root[k];else root[k]=data[k]}}
+    else{for(const k in root)delete root[k];if(data&&typeof data==='object')Object.assign(root,data)}
+    return}
+  let o=root;
+  for(let i=0;i<seg.length-1;i++){if(!o[seg[i]]||typeof o[seg[i]]!=='object')o[seg[i]]={};o=o[seg[i]]}
+  const last=seg[seg.length-1];
+  if(merge&&data&&typeof data==='object'){
+    if(!o[last]||typeof o[last]!=='object')o[last]={};
+    for(const k in data){if(data[k]===null)delete o[last][k];else o[last][k]=data[k]}
+  }else if(data===null)delete o[last];else o[last]=data;
 }
-document.getElementById('f').addEventListener('submit',async e=>{
-  e.preventDefault();
-  const m=document.getElementById('m'),ms=document.getElementById('ms'),txt=m.value.trim();
-  if(!txt||!DB)return;
-  try{
-    const r=await fetch(DB+'/notes/inbox.json',{method:'POST',body:JSON.stringify({text:txt,at:Date.now()})});
-    if(r.ok){m.value='';ms.textContent='Trimis. Apare la finalul notițelor din aplicația principală.'}
-    else ms.textContent='Nu s-a putut trimite ('+r.status+'). Verifică regulile Firebase.';
-  }catch(x){ms.textContent='Fără conexiune. Mesajul nu a fost trimis.'}
-});
 
-const $=id=>document.getElementById(id),ss=$('ss');
-const KEYOK=/^[A-Za-z0-9_-]{8,}$/;
-const ls={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
-$('nick').value=ls.get('v_nick');$('key').value=ls.get('v_key');
-$('nick').addEventListener('change',()=>ls.set('v_nick',$('nick').value.trim()));
-$('key').addEventListener('change',()=>ls.set('v_key',$('key').value.trim()));
-// identificator unic per sesiune (per filă): două vizualizatoare în același browser nu se amestecă
-let cid='';try{cid=sessionStorage.getItem('v_cid')||''}catch(e){}
-if(!cid){cid=Array.from(crypto.getRandomValues(new Uint8Array(12)),x=>(x%36).toString(36)).join('');try{sessionStorage.setItem('v_cid',cid)}catch(e){}}
-async function send(){
-  const m=$('msg').value.trim(),k=$('key').value.trim(),n=$('nick').value.trim()||'Anonim';
-  if(!DB){ss.textContent='Lipsește dbUrl în config.js.';return}
-  if(!m){ss.textContent='Scrie un mesaj.';return}
-  if(!KEYOK.test(k)){ss.textContent='Introdu cheia de scriere (minim 8 caractere: litere, cifre, - sau _).';return}
-  ls.set('v_nick',n==='Anonim'?'':n);ls.set('v_key',k);
-  const id=cid.slice(0,6)+'-'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-  $('send').disabled=true;
-  try{
-    const r=await fetch(DB+'/notes/inbox/'+k+'/'+id+'.json',{method:'PUT',body:JSON.stringify({n,m,c:cid,at:Date.now()})});
-    if(r.ok){$('msg').value='';ss.textContent='Trimis.';listenOut()}
-    else{const body=(await r.text()).slice(0,150);ss.textContent='Eroare '+r.status+': '+body+(r.status===401?' (cheia nu se potrivește cu cea din regulile Firebase)':'')}
-  }catch(e){ss.textContent='Fără conexiune.'}
-  $('send').disabled=false;
-}
-/* mesaje de la echipă */
-let esAll=null,esTo=null,lastBanner='',shown=new Set();
-function listenOut(){
-  const k=$('key').value.trim();
-  if(esAll){esAll.close();esAll=null}if(esTo){esTo.close();esTo=null}
-  if(!DB||!KEYOK.test(k))return;
-  esAll=new EventSource(DB+'/notes/out/'+k+'/all.json');
-  esAll.addEventListener('put',e=>{try{const d=JSON.parse(e.data).data;
-    if(d&&typeof d.m==='string'){if(d.id!==lastBanner){lastBanner=d.id||'';$('btxt').textContent=d.m;$('banner').hidden=false}}
-    else{lastBanner='';$('banner').hidden=true}}catch(x){}});
-  esTo=new EventSource(DB+'/notes/out/'+k+'/to/'+cid+'.json');
-  const onTo=e=>{try{const m=JSON.parse(e.data),list=[];
-    if(m.path==='/'){if(m.data&&typeof m.data==='object')for(const id in m.data)list.push([id,m.data[id]])}
-    else if(m.data&&typeof m.data==='object')list.push([m.path.slice(1),m.data]);
-    list.sort((a,b)=>(a[1].at||0)-(b[1].at||0));
-    for(const [id,x] of list){if(shown.has(id)||typeof x.m!=='string')continue;shown.add(id);
-      const d=document.createElement('div');d.textContent='Echipă'+(typeof x.re==='string'&&x.re?' (răspuns la „'+x.re+'”)':'')+': '+x.m;$('rep').appendChild(d);$('rep').hidden=false;$('rep').scrollTop=$('rep').scrollHeight}}catch(x){}};
-  ['put','patch'].forEach(ev=>esTo.addEventListener(ev,onTo));
+/* notițe + banner: fără parolă */
+let lastBanner='';
+if(!DB){$('st').textContent='Lipsește dbUrl în config.js.'}
+else{
+  const pub={};
+  const es=new EventSource(DB+'/notes/live/pub.json');
+  ['put','patch'].forEach(ev=>es.addEventListener(ev,e=>{
+    try{const m=JSON.parse(e.data);applyEv(pub,m.path,m.data,ev==='patch');
+      $('t').value=typeof pub.text==='string'?pub.text:'';$('st').textContent='Live: se actualizează automat';
+      const b=pub.banner;
+      if(b&&typeof b.m==='string'){if(b.id!==lastBanner){lastBanner=b.id||'';$('btxt').textContent=b.m;$('banner').hidden=false}}
+      else{lastBanner='';$('banner').hidden=true}
+    }catch(x){}}));
+  es.onerror=()=>{$('st').textContent='Conexiune întreruptă, se reconectează…'};
 }
 $('bx').onclick=()=>{$('banner').hidden=true};
-$('key').addEventListener('change',listenOut);
-if(!KEYOK.test($('key').value.trim()))$('set').open=true;
-listenOut();
+
+/* chat: necesită parola echipei */
+let thread={},chatES=null,pwd='';
+$('nick').value=ls.get('v_nick');
+function render(){
+  const cv=$('cv');cv.textContent='';
+  const list=Object.entries((thread&&thread.msgs)||{}).filter(([,x])=>x&&typeof x.m==='string').sort((a,b)=>(a[1].at||0)-(b[1].at||0));
+  if(!list.length){const p=document.createElement('p');p.textContent='Scrie primul mesaj către echipă.';cv.appendChild(p)}
+  for(const [,x] of list){
+    const d=document.createElement('div'),who=document.createElement('small');
+    d.className='bub'+(x.f==='v'?' me':'');who.textContent=x.f==='v'?'Tu':'Echipă';
+    d.append(who,document.createTextNode(x.m));cv.appendChild(d);
+  }
+  cv.scrollTop=cv.scrollHeight;
+}
+async function enter(){
+  const k=$('pw').value.trim();
+  if(!DB){say('Lipsește dbUrl în config.js.');return}
+  if(!PWOK.test(k)){say('Parola nu este validă.');return}
+  try{
+    const r=await fetch(DB+'/chat/'+k+'/'+cid+'.json');
+    if(r.status===401||r.status===403){say('Parolă greșită.');return}
+    if(!r.ok){say('Eroare de conectare ('+r.status+').');return}
+  }catch(e){say('Fără conexiune.');return}
+  pwd=k;ses.set('v_pw',k);say('');
+  $('lock').hidden=true;$('room').hidden=false;
+  if(!$('nick').value.trim())$('set').open=true;
+  if(chatES)chatES.close();
+  thread={};render();
+  chatES=new EventSource(DB+'/chat/'+k+'/'+cid+'.json');
+  ['put','patch'].forEach(ev=>chatES.addEventListener(ev,e=>{
+    try{const m=JSON.parse(e.data);applyEv(thread,m.path,m.data,ev==='patch');render()}catch(x){}}));
+  chatES.onerror=()=>say('Conexiune chat întreruptă, se reconectează…');
+  chatES.onopen=()=>say('');
+}
+async function send(){
+  const m=$('msg').value.trim(),n=$('nick').value.trim()||'Anonim';
+  if(!m){say('Scrie un mesaj.');return}
+  ls.set('v_nick',n==='Anonim'?'':n);
+  const id=cid.slice(0,6)+'-'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  const body={meta:{n,at:(thread.meta&&thread.meta.at)||Date.now()}};
+  body['msgs/'+id]={f:'v',m,at:Date.now()};
+  $('send').disabled=true;
+  try{
+    const r=await fetch(DB+'/chat/'+pwd+'/'+cid+'.json',{method:'PATCH',body:JSON.stringify(body)});
+    if(r.ok){$('msg').value='';say('')}
+    else say('Eroare '+r.status+': '+(await r.text()).slice(0,120)+(r.status===401?' (parola nu se potrivește cu regulile Firebase)':''));
+  }catch(e){say('Fără conexiune.')}
+  $('send').disabled=false;
+}
+$('enter').onclick=enter;
+$('pw').addEventListener('keydown',e=>{if(e.key==='Enter')enter()});
 $('send').onclick=send;
 $('msg').addEventListener('keydown',e=>{if(e.key==='Enter')send()});
+if(ses.get('v_pw')){$('pw').value=ses.get('v_pw');enter()}
 </script>
 </body>
 </html>

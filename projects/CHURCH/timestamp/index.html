@@ -13,7 +13,7 @@ box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:en
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *,*::before,*::after{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Archivo,system-ui,sans-serif}
-.wrap{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;max-width:1500px;margin:0 auto;padding:16px}
+.wrap{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:16px;max-width:1500px;margin:0 auto;padding:16px}
 @media(max-width:900px){.wrap{grid-template-columns:1fr}}
 .col{display:flex;flex-direction:column;gap:16px;min-width:0}
 section{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px}
@@ -56,10 +56,12 @@ li button{padding:0 8px;border:0;background:none;color:var(--rec)}
 .notes{gap:16px}
 select{font:inherit;color:inherit;background:var(--field);border:1px solid var(--line);border-radius:4px;padding:8px;max-width:100%}
 .team{flex:1;min-height:0;overflow:auto;background:var(--field);border:1px solid var(--line);border-radius:4px;padding:6px;margin-top:8px}
-.grp{margin-bottom:10px}
-.tm{padding:4px 7px;border-radius:3px;cursor:pointer;overflow-wrap:anywhere}
-.tm:hover{background:var(--line)}
-.tm[aria-selected=true]{background:var(--acc);color:#fff}
+.th{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 8px;margin-bottom:8px}
+.thh{display:flex;justify-content:space-between;align-items:center}
+.th.new strong::after{content:" ●";color:var(--rec)}
+.cv{max-height:150px;overflow:auto;margin:4px 0}
+.bub{max-width:88%;width:fit-content;padding:4px 9px;border-radius:10px;margin:3px 0;overflow-wrap:anywhere;font-size:14px;background:var(--line)}
+.bub.m{background:var(--acc);color:#fff;margin-left:auto}
 .notes textarea{flex:1;resize:none;margin-top:8px}
 .msg{font-size:13px;color:var(--mute);min-height:1.2em;margin-top:6px}
 </style>
@@ -131,21 +133,19 @@ select{font:inherit;color:inherit;background:var(--field);border:1px solid var(-
   <section style="flex:1;display:flex;flex-direction:column;min-height:0">
     <h2>Notițe rapide</h2>
     <p class="s" id="nhint">Nu se salvează între sesiuni.</p>
-    <input type="password" id="key" placeholder="Cheie de scriere (partajare)" autocomplete="off" aria-label="Cheie de scriere" style="margin:6px 0;width:100%;background:var(--field);border:1px solid var(--line);border-radius:4px;padding:6px 8px">
+    <input type="password" id="key" placeholder="Parola echipei" autocomplete="off" aria-label="Parola echipei" style="margin:6px 0;width:100%;background:var(--field);border:1px solid var(--line);border-radius:4px;padding:6px 8px">
     <p class="s" id="sync" aria-live="polite"></p>
     <textarea id="notes" aria-label="Notițe rapide"></textarea>
   </section>
   <section style="flex:1;display:flex;flex-direction:column;min-height:0">
-    <h2>Mesaje echipă</h2>
-    <div id="team" class="team" role="listbox" aria-label="Mesaje echipă"></div>
-    <p class="s" id="rto" style="margin-top:8px" aria-live="polite"></p>
-    <div class="row">
-      <input type="text" id="rtxt" maxlength="500" placeholder="Răspuns" aria-label="Răspuns">
-      <button id="rsend" disabled>Răspunde</button>
-      <button id="rall">Trimite tuturor</button>
-    </div>
-    <div class="row" style="margin-top:6px"><button id="rban">Retrage bannerul</button><button id="tclr">Șterge mesajele</button></div>
+    <h2>Chat echipă</h2>
+    <div id="team" class="team" aria-label="Conversații" aria-live="polite"><div class="s" id="tempty" style="padding:4px">Introdu parola echipei pentru chat.</div></div>
     <p class="s" id="tstat" aria-live="polite" style="margin-top:6px"></p>
+    <div class="row" style="margin-top:6px">
+      <input type="text" id="btxt" maxlength="300" placeholder="Banner pentru toți vizualizatorii" aria-label="Text banner">
+      <button id="bsend">Trimite banner</button><button id="bclr">Retrage</button>
+    </div>
+    <div class="row" style="margin-top:6px"><button id="tclr">Șterge tot chatul</button></div>
   </section>
 </aside>
 </div>
@@ -285,141 +285,138 @@ $('clr').onclick=()=>{if(chapters.length&&confirm('Ștergi toate capitolele?')){
 renderLists();renderChapters();
 loadChannel(); // ultimul pas: say() și restul variabilelor există deja
 
-/* ---------- notes sync (Firebase Realtime Database, REST) ---------- */
+/* ---------- Firebase: notițe live + chat echipă ---------- */
 const DB=((window.CFG&&CFG.dbUrl)||'').replace(/\/+$/,'');
-let writing=false,dirty=false,saveT=null;
-$('key').value=store.get('cl_key','');
-const KEYOK=/^[A-Za-z0-9_-]{8,}$/;
-$('key').addEventListener('change',()=>{store.set('cl_key',$('key').value.trim());push();listen()});
+const PWOK=/^[A-Za-z0-9_-]{8,}$/;
+const ses={get(k){try{return sessionStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{sessionStorage.setItem(k,v)}catch(e){}}};
+const pw=()=>$('key').value.trim();
+const tst=m=>{$('tstat').textContent=m};
+const rid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+let writing=false,dirty=false,saveT=null,authed=false,bannerState=null,connId=0;
+async function fbReq(method,path,body){
+  const r=await fetch(DB+path+'.json',{method,body:body?JSON.stringify(body):undefined});
+  if(!r.ok)throw new Error(r.status+' '+(await r.text()).slice(0,100));
+}
+// aplică evenimentele put/patch din Firebase pe un obiect local
+function applyEv(root,path,data,merge){
+  const seg=path.split('/').filter(Boolean);
+  if(!seg.length){
+    if(merge){for(const k in data){if(data[k]===null)delete root[k];else root[k]=data[k]}}
+    else{for(const k in root)delete root[k];if(data&&typeof data==='object')Object.assign(root,data)}
+    return}
+  let o=root;
+  for(let i=0;i<seg.length-1;i++){if(!o[seg[i]]||typeof o[seg[i]]!=='object')o[seg[i]]={};o=o[seg[i]]}
+  const last=seg[seg.length-1];
+  if(merge&&data&&typeof data==='object'){
+    if(!o[last]||typeof o[last]!=='object')o[last]={};
+    for(const k in data){if(data[k]===null)delete o[last][k];else o[last][k]=data[k]}
+  }else if(data===null)delete o[last];else o[last]=data;
+}
+
+/* notițe */
 async function push(){
-  const k=$('key').value.trim();
-  if(!DB){$('sync').textContent='Lipsește dbUrl în config.js.';return}
-  if(!KEYOK.test(k)){$('sync').textContent='Introdu cheia de scriere (minim 8 caractere: litere, cifre, - sau _).';return}
+  if(!authed)return;
   if(writing){dirty=true;return}
   writing=true;
   try{
-    const r=await fetch(DB+'/notes/live.json',{method:'PUT',body:JSON.stringify({text:$('notes').value,k,at:Date.now()})});
-    $('sync').textContent=r.ok?'Partajat live cu vizualizatorii':(r.status===401||r.status===403?'Cheie de scriere greșită.':'Eroare la partajare ('+r.status+').');
+    const pub={text:$('notes').value,at:Date.now()};if(bannerState)pub.banner=bannerState;
+    const r=await fetch(DB+'/notes/live.json',{method:'PUT',body:JSON.stringify({pub,k:pw()})});
+    $('sync').textContent=r.ok?'Notițe partajate live':(r.status===401||r.status===403?'Parolă greșită.':'Eroare la partajare ('+r.status+').');
   }catch(e){$('sync').textContent='Fără conexiune. Se reîncearcă la următoarea modificare.'}
   writing=false;if(dirty){dirty=false;push()}
 }
 $('notes').addEventListener('input',()=>{clearTimeout(saveT);saveT=setTimeout(push,400)});
-push(); // pornește cu notițe goale
+$('bsend').onclick=()=>{
+  const m=$('btxt').value.trim();
+  if(!authed){tst('Introdu parola echipei.');return}
+  if(!m){tst('Scrie textul bannerului.');return}
+  bannerState={m:m.slice(0,300),id:rid(),at:Date.now()};$('btxt').value='';push();tst('Banner trimis tuturor.');
+};
+$('bclr').onclick=()=>{if(!authed)return;bannerState=null;push();tst('Banner retras.')};
 
-/* ---------- mesaje echipă ---------- */
-let people=store.get('cl_people',{}),inES=null;
-const seen=new Set(Object.values(people).flatMap(p=>p.msgs.map(x=>x.id)));
-function items(path,data){const a=[];
-  if(path==='/'){if(data&&typeof data==='object')for(const id in data)a.push([id,data[id]])}
-  else if(data&&typeof data==='object')a.push([path.slice(1),data]);
-  return a.sort((x,y)=>((x[1]&&x[1].at)||0)-((y[1]&&y[1].at)||0))}
-let sel=null;
-// dacă mai multe sesiuni folosesc aceeași poreclă, le deosebim prin număr: Ana (1), Ana (2)
-const lbl=(p,x)=>p.name+(p.cids.length>1&&x.c?' ('+(p.cids.indexOf(x.c)+1)+')':'');
-function selMsg(){if(!sel)return null;const p=people[sel.k],m=p&&p.msgs.find(x=>x.id===sel.id);return m?{p,m}:null}
-function renderTeam(scroll=true){
-  if(sel&&!selMsg())sel=null;
-  const box=$('team'),st=box.scrollTop;box.innerHTML='';
-  const ps=Object.keys(people).map(k=>[k,people[k]]).sort((a,b)=>collator.compare(a[1].name,b[1].name));
-  if(!ps.length)box.innerHTML='<div class="s" style="padding:4px">Niciun mesaj încă.</div>';
-  for(const [k,p] of ps){
-    const g=document.createElement('div');g.className='grp';
-    for(const x of p.msgs){
-      const d=document.createElement('div');d.className='tm';d.tabIndex=0;d.setAttribute('role','option');
-      d.dataset.k=k;d.dataset.id=x.id;
-      d.setAttribute('aria-selected',sel&&sel.k===k&&sel.id===x.id?'true':'false');
-      d.textContent=lbl(p,x)+' : '+x.m;g.appendChild(d);
+/* chat: o conversație per vizualizator (chat/<parola>/<id sesiune>) */
+let chatES=null,chat={},threads=new Map(),chatReady=false;
+const box=$('team');
+function stopChat(){if(chatES){chatES.close();chatES=null}chatReady=false}
+function clearThreads(){for(const t of threads.values())t.el.remove();threads.clear();chat={}}
+function lock(msg){authed=false;stopChat();clearThreads();$('tempty').textContent='Introdu parola echipei pentru chat.';$('sync').textContent=msg||''}
+async function chatSend(cid,m){
+  const body={};body['msgs/'+rid()]={f:'m',m:m.slice(0,500),at:Date.now()};
+  await fbReq('PATCH','/chat/'+pw()+'/'+encodeURIComponent(cid),body);
+}
+function mkThread(cid){
+  const el=document.createElement('div');el.className='th';
+  const hd=document.createElement('div');hd.className='thh';
+  const nm=document.createElement('strong');
+  const del=document.createElement('button');del.className='del';del.textContent='×';del.setAttribute('aria-label','Șterge conversația');
+  hd.append(nm,del);
+  const cv=document.createElement('div');cv.className='cv';cv.setAttribute('role','log');
+  const row=document.createElement('div');row.className='row';
+  const inp=document.createElement('input');inp.type='text';inp.maxLength=500;inp.placeholder='Răspuns';inp.setAttribute('aria-label','Răspuns');
+  const b=document.createElement('button');b.textContent='Trimite';
+  row.append(inp,b);el.append(hd,cv,row);
+  const go=async()=>{const m=inp.value.trim();if(!m)return;inp.value='';
+    try{await chatSend(cid,m);tst('')}catch(e){inp.value=m;tst('Eroare la trimitere: '+e.message)}};
+  b.onclick=go;inp.addEventListener('keydown',e=>{if(e.key==='Enter')go()});
+  el.addEventListener('focusin',()=>el.classList.remove('new'));
+  del.onclick=async()=>{if(confirm('Ștergi conversația cu '+nm.textContent+'?'))
+    try{await fbReq('DELETE','/chat/'+pw()+'/'+encodeURIComponent(cid))}catch(e){tst('Eroare: '+e.message)}};
+  return {el,nm,cv,ids:new Set()};
+}
+const nickOf=c=>(chat[c].meta&&chat[c].meta.n)||'Anonim';
+const lastAt=c=>Math.max(0,...Object.values(chat[c].msgs||{}).map(x=>(x&&x.at)||0));
+function renderChat(){
+  const cids=Object.keys(chat).filter(c=>chat[c]&&typeof chat[c]==='object');
+  for(const [c,t] of threads)if(!cids.includes(c)){t.el.remove();threads.delete(c)}
+  const groups={};
+  for(const c of cids){(groups[nickOf(c).toLowerCase()]=groups[nickOf(c).toLowerCase()]||[]).push(c)}
+  for(const g of Object.values(groups))g.sort((a,b)=>((chat[a].meta&&chat[a].meta.at)||0)-((chat[b].meta&&chat[b].meta.at)||0));
+  for(const c of cids.slice().sort((a,b)=>lastAt(a)-lastAt(b))){
+    let t=threads.get(c);
+    if(!t){t=mkThread(c);threads.set(c,t);box.insertBefore(t.el,box.firstChild)}
+    const g=groups[nickOf(c).toLowerCase()];
+    t.nm.textContent=nickOf(c)+(g.length>1?' ('+(g.indexOf(c)+1)+')':'');
+    const list=Object.entries(chat[c].msgs||{}).filter(([,x])=>x&&typeof x.m==='string').sort((a,b)=>(a[1].at||0)-(b[1].at||0));
+    const nb=t.cv.scrollHeight-t.cv.scrollTop-t.cv.clientHeight<40||!t.ids.size;
+    for(const [id,x] of list){
+      if(t.ids.has(id))continue;t.ids.add(id);
+      const d=document.createElement('div');d.className='bub '+(x.f==='m'?'m':'v');d.textContent=x.m;t.cv.appendChild(d);
+      if(x.f!=='m'&&chatReady&&!t.el.contains(document.activeElement))t.el.classList.add('new');
     }
-    box.appendChild(g);
+    if(nb)t.cv.scrollTop=t.cv.scrollHeight;
   }
-  box.scrollTop=scroll?box.scrollHeight:st;
-  const s0=selMsg();
-  $('rto').textContent=s0?'Răspuns către '+lbl(s0.p,s0.m)+' (apasă din nou pe mesaj pentru a anula)':'Selectează un mesaj pentru a răspunde.';
-  $('rsend').disabled=!s0;
-  store.set('cl_people',people);
+  $('tempty').textContent=cids.length?'':'Nicio conversație încă.';
 }
-$('team').addEventListener('click',e=>{const d=e.target.closest('.tm');if(!d)return;
-  sel=(sel&&sel.k===d.dataset.k&&sel.id===d.dataset.id)?null:{k:d.dataset.k,id:d.dataset.id};
-  renderTeam(false);if(sel)$('rtxt').focus()});
-$('team').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('tm')){e.preventDefault();e.target.click()}});
-function handleMsgs(path,data){
-  let added=false;
-  for(const [id,m] of items(path,data)){
-    if(!m||typeof m.m!=='string'||seen.has(id))continue;
-    seen.add(id);
-    const name=String(m.n||'Anonim').slice(0,40),k='n:'+name.toLowerCase();
-    const p=people[k]||(people[k]={name,cids:[],msgs:[]});
-    if(m.c&&!p.cids.includes(String(m.c)))p.cids.push(String(m.c).slice(0,40));
-    p.msgs.push({id,m:m.m.slice(0,500),at:m.at||Date.now(),c:m.c?String(m.c).slice(0,40):''});
-    added=true;
-    fetch(DB+'/notes/inbox/'+$('key').value.trim()+'/'+encodeURIComponent(id)+'.json',{method:'DELETE'}).catch(()=>{});
-  }
-  if(added)renderTeam();
+function startChat(){
+  stopChat();clearThreads();
+  chatES=new EventSource(DB+'/chat/'+pw()+'.json');
+  ['put','patch'].forEach(ev=>chatES.addEventListener(ev,e=>{
+    try{const m=JSON.parse(e.data);applyEv(chat,m.path,m.data,ev==='patch');renderChat();chatReady=true}catch(x){}}));
+  chatES.onerror=()=>tst('Conexiune chat întreruptă, se reconectează…');
+  chatES.onopen=()=>tst('');
 }
-function listen(){
-  if(inES){inES.close();inES=null}
-  const k=$('key').value.trim();
-  if(!DB||!KEYOK.test(k))return;
-  inES=new EventSource(DB+'/notes/inbox/'+k+'.json');
-  ['put','patch'].forEach(ev=>inES.addEventListener(ev,e=>{try{const m=JSON.parse(e.data);handleMsgs(m.path,m.data)}catch(x){}}));
-  inES.onerror=()=>{$('tstat').textContent='Conexiune la mesaje întreruptă. Verifică cheia și regulile.'};
-}
-const tst=m=>{$('tstat').textContent=m};
-const rid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-async function fb(method,path,body){
-  const r=await fetch(DB+path+'.json',{method,body:body?JSON.stringify(body):undefined});
-  if(!r.ok)throw new Error(r.status+' '+(await r.text()).slice(0,120));
-}
-async function reply(){
-  const m=$('rtxt').value.trim(),k=$('key').value.trim(),t=selMsg();
-  if(!t){tst('Selectează un mesaj sau folosește Trimite tuturor.');return}
-  if(!m){tst('Scrie un răspuns.');return}
-  if(!KEYOK.test(k)){tst('Introdu cheia de scriere.');return}
-  const cids=t.m.c?[t.m.c]:t.p.cids;
-  if(!cids.length){tst('Nu am un identificator pentru acest vizualizator.');return}
+$('tclr').onclick=async()=>{if(authed&&confirm('Ștergi toate conversațiile?'))
+  try{await fbReq('DELETE','/chat/'+pw())}catch(e){tst('Eroare: '+e.message)}};
+
+/* conectare cu parola echipei */
+async function connect(){
+  const id=++connId,k=pw();
+  if(!DB){$('sync').textContent='Lipsește dbUrl în config.js.';return}
+  if(!PWOK.test(k)){lock('Introdu parola echipei (minim 8 caractere: litere, cifre, - sau _).');return}
   try{
-    await Promise.all(cids.map(c=>fb('PUT','/notes/out/'+k+'/to/'+encodeURIComponent(c)+'/'+rid(),{m,re:t.m.m.slice(0,80),at:Date.now()})));
-    tst('Răspuns trimis către '+lbl(t.p,t.m)+'.');$('rtxt').value='';
-  }catch(e){tst('Eroare la trimitere: '+e.message)}
+    const r=await fetch(DB+'/chat/'+k+'.json?shallow=true');
+    if(id!==connId)return;
+    if(r.status===401||r.status===403){lock('Parolă greșită.');return}
+    if(!r.ok)throw new Error(r.status);
+  }catch(e){lock('Fără conexiune la Firebase.');return}
+  ses.set('cl_pw',k);authed=true;
+  try{const b=await (await fetch(DB+'/notes/live/pub/banner.json')).json();if(id===connId)bannerState=b&&b.m?b:null}catch(e){}
+  if(id!==connId)return;
+  push();startChat();
 }
-async function sendAll(){
-  const m=$('rtxt').value.trim(),k=$('key').value.trim();
-  if(!m){tst('Scrie un mesaj.');return}
-  if(!KEYOK.test(k)){tst('Introdu cheia de scriere.');return}
-  try{await fb('PUT','/notes/out/'+k+'/all',{m,at:Date.now(),id:rid()});tst('Trimis tuturor (banner).');$('rtxt').value=''}
-  catch(e){tst('Eroare la trimitere: '+e.message)}
-}
-$('rsend').onclick=reply;$('rall').onclick=sendAll;
-$('rtxt').addEventListener('keydown',e=>{if(e.key==='Enter'){if(selMsg())reply();else tst('Selectează un mesaj sau apasă Trimite tuturor.')}});
-$('rban').onclick=async()=>{const k=$('key').value.trim();if(!KEYOK.test(k))return;
-  try{await fb('DELETE','/notes/out/'+k+'/all');tst('Banner retras.')}catch(e){tst('Eroare: '+e.message)}};
-$('tclr').onclick=()=>{if(confirm('Ștergi toate mesajele primite?')){people={};renderTeam()}};
-renderTeam();listen();
-
-/* ---------- mesaje primite de la viewer: se adaugă la finalul notițelor ---------- */
-(async()=>{
-  if(!DB||!window.EventSource)return;
-  try{await fetch(DB+'/notes/inbox.json',{method:'DELETE'})}catch(e){}
-  const seen=new Set();let first=true;
-  const add=txt=>{
-    const n=$('notes');
-    if(n.value&&!n.value.endsWith('\n'))n.value+='\n';
-    n.value+=txt+'\n';n.scrollTop=n.scrollHeight;
-    clearTimeout(saveT);saveT=setTimeout(push,200);
-  };
-  const es=new EventSource(DB+'/notes/inbox.json');
-  es.addEventListener('put',e=>{
-    let m;try{m=JSON.parse(e.data)}catch(x){return}
-    if(m.path==='/'){
-      const o=m.data||{};
-      Object.keys(o).sort().forEach(k=>{if(!seen.has(k)){seen.add(k);if(!first&&o[k]&&typeof o[k].text==='string')add(o[k].text)}});
-      first=false;return;
-    }
-    const id=m.path.split('/')[1];
-    if(!id||seen.has(id)||!m.data||typeof m.data.text!=='string')return;
-    seen.add(id);add(m.data.text);
-  });
-})();
+$('key').value=ses.get('cl_pw');
+$('key').addEventListener('change',connect);
+connect();
 </script>
 </body>
 </html>
