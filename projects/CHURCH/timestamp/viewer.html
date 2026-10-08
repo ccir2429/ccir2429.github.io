@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Notițe rapide (doar citire)</title>
+<style>
+:root{--bg:#e8ecef;--panel:#fff;--ink:#16212a;--mute:#5b6a76;--line:#c9d2d9;--field:#f5f7f9}
+@media (prefers-color-scheme:dark){:root{--bg:#12181d;--panel:#1b242b;--ink:#e6ecf0;--mute:#8a9aa6;--line:#2f3c46;--field:#141b20}}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,sans-serif;padding:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom))}
+main{display:flex;flex-direction:column;height:100%;max-width:900px;margin:0 auto;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px}
+h1{font-size:18px;margin:0}
+p{margin:2px 0 8px;color:var(--mute);font-size:13px}
+textarea{flex:1;resize:none;width:100%;background:var(--field);color:inherit;border:1px solid var(--line);border-radius:4px;padding:10px;font:inherit}
+</style>
+</head>
+<body>
+<main>
+  <h1>Notițe rapide</h1>
+  <p id="st" aria-live="polite">Se conectează…</p>
+  <textarea id="t" readonly aria-label="Notițe rapide, doar citire"></textarea>
+</main>
+<script src="config.js"></script>
+<script>
+const DB=((window.CFG&&CFG.dbUrl)||'').replace(/\/+$/,'');
+const t=document.getElementById('t'),st=document.getElementById('st');
+if(!DB){st.textContent='Lipsește dbUrl în config.js.'}
+else{
+  const es=new EventSource(DB+'/notes/live/text.json');
+  es.addEventListener('put',e=>{
+    try{const m=JSON.parse(e.data);if(m.path==='/'){t.value=typeof m.data==='string'?m.data:'';st.textContent='Live: se actualizează automat'}}catch(x){}
+  });
+  es.onerror=()=>{st.textContent='Conexiune întreruptă, se reconectează…'};
+}
+</script>
+</body>
+</html>
