@@ -54,6 +54,10 @@ li button{padding:0 8px;border:0;background:none;color:var(--rec)}
 .notes{position:sticky;top:calc(16px + env(safe-area-inset-top,0px));height:calc(100vh - 32px);display:flex;flex-direction:column}
 @media(max-width:900px){.notes{position:static;height:340px}}
 .notes textarea{flex:1;resize:none;margin-top:8px}
+.viewer .col{display:none}
+.viewer .wrap{grid-template-columns:1fr;max-width:900px}
+.viewer .notes{position:static;height:calc(100vh - 32px)}
+.viewer .notes textarea{cursor:default}
 .msg{font-size:13px;color:var(--mute);min-height:1.2em;margin-top:6px}
 </style>
 </head>
@@ -123,7 +127,8 @@ li button{padding:0 8px;border:0;background:none;color:var(--rec)}
 <aside class="notes">
   <section style="flex:1;display:flex;flex-direction:column;min-height:0">
     <h2>Notițe rapide</h2>
-    <p class="s">Nu se salvează între sesiuni.</p>
+    <p class="s" id="nhint">Nu se salvează între sesiuni.</p>
+    <p class="s" id="sync" aria-live="polite"></p>
     <textarea id="notes" aria-label="Notițe rapide"></textarea>
   </section>
 </aside>
@@ -248,6 +253,35 @@ $('dl').onclick=()=>{const a=document.createElement('a');a.href=URL.createObject
 $('clr').onclick=()=>{if(chapters.length&&confirm('Ștergi toate capitolele?')){chapters=[];renderChapters()}};
 
 renderLists();renderChapters();
+
+/* ---------- notes sync (db) ---------- */
+let notesRef=null,viewer=/viewer/i.test(location.hash+location.search),writing=false,dirty=false,saveT=null,unsub=null;
+function readNotes(){
+  if(unsub||!notesRef)return;
+  unsub=notesRef.onSnapshot(sn=>{const d=sn.exists?(typeof sn.data==='function'?sn.data():sn.data):null;
+    $('notes').value=(d&&d.text)||'';$('sync').textContent='Live: se actualizează automat'},
+    ()=>{$('sync').textContent='Nu pot citi notițele. Verifică accesul la link.'});
+}
+function setViewer(){viewer=true;document.body.classList.add('viewer');$('notes').readOnly=true;
+  $('nhint').textContent='Doar citire.';readNotes()}
+async function push(){
+  if(!notesRef||viewer)return;
+  if(writing){dirty=true;return}
+  writing=true;
+  try{await notesRef.set({text:$('notes').value,at:Date.now()});$('sync').textContent='Partajat live cu vizualizatorii'}
+  catch(e){if(e&&e.code==='invalid_argument')setViewer();else $('sync').textContent='Nu s-a putut partaja.'}
+  writing=false;if(dirty){dirty=false;push()}
+}
+$('notes').addEventListener('input',()=>{clearTimeout(saveT);saveT=setTimeout(push,400)});
+(async()=>{
+  if(viewer)setViewer();
+  let db=null,user=null;
+  try{db=await claude.use('db');user=await claude.use('user')}catch(e){}
+  if(!db){$('sync').textContent='Sincronizarea nu e disponibilă (conectează-te la claude.ai).';return}
+  if(!viewer&&user){try{if(!(await user.canEdit()))setViewer()}catch(e){}}
+  notesRef=db.doc('notes/live');
+  if(viewer)readNotes();else push(); // pagina principală pornește cu notițe goale
+})();
 </script>
 </body>
 </html>
