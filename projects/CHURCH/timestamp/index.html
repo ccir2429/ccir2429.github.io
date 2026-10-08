@@ -64,7 +64,7 @@ li button{padding:0 8px;border:0;background:none;color:var(--rec)}
     <h1>Capitole YouTube Live</h1>
     <p class="s">Lipește linkul transmisiunii, apoi apasă butonul la fiecare schimbare de act.</p>
     <div class="row" style="margin-top:10px">
-      <input type="text" id="url" aria-label="Link YouTube">
+      <input type="text" id="url" placeholder="https://www.youtube.com/watch?v=… sau ID video" aria-label="Link YouTube">
       <button id="load">Încarcă</button>
     </div>
     <div class="vid" id="vid"></div>
@@ -256,11 +256,12 @@ renderLists();renderChapters();
 const DB=((window.CFG&&CFG.dbUrl)||'').replace(/\/+$/,'');
 let writing=false,dirty=false,saveT=null;
 $('key').value=store.get('cl_key','');
-$('key').addEventListener('change',()=>{store.set('cl_key',$('key').value.trim());push()});
+const KEYOK=/^[A-Za-z0-9_-]{8,}$/;
+$('key').addEventListener('change',()=>{store.set('cl_key',$('key').value.trim());push();listen()});
 async function push(){
   const k=$('key').value.trim();
   if(!DB){$('sync').textContent='Lipsește dbUrl în config.js.';return}
-  if(!k){$('sync').textContent='Introdu cheia de scriere pentru a partaja notițele.';return}
+  if(!KEYOK.test(k)){$('sync').textContent='Introdu cheia de scriere (minim 8 caractere: litere, cifre, - sau _).';return}
   if(writing){dirty=true;return}
   writing=true;
   try{
@@ -271,6 +272,58 @@ async function push(){
 }
 $('notes').addEventListener('input',()=>{clearTimeout(saveT);saveT=setTimeout(push,400)});
 push(); // pornește cu notițe goale
+
+/* ---------- mesaje primite de la vizualizator ---------- */
+let inES=null;const seen=new Set();
+function handleMsgs(path,data){
+  const items=[];
+  if(path==='/'){if(data&&typeof data==='object')for(const id in data)items.push([id,data[id]])}
+  else if(data&&typeof data==='object')items.push([path.slice(1),data]);
+  items.sort((a,b)=>((a[1]&&a[1].at)||0)-((b[1]&&b[1].at)||0));
+  let added=false;
+  for(const [id,m] of items){
+    if(seen.has(id)||!m||typeof m.m!=='string')continue;
+    seen.add(id);
+    const n=$('notes'),who=String(m.n||'Anonim').slice(0,40);
+    n.value+=(n.value&&!n.value.endsWith('\n')?'\n':'')+who+': '+m.m.slice(0,500)+'\n';
+    n.scrollTop=n.scrollHeight;added=true;
+    fetch(DB+'/notes/inbox/'+$('key').value.trim()+'/'+encodeURIComponent(id)+'.json',{method:'DELETE'}).catch(()=>{});
+  }
+  if(added)push();
+}
+function listen(){
+  if(inES){inES.close();inES=null}
+  const k=$('key').value.trim();
+  if(!DB||!KEYOK.test(k))return;
+  inES=new EventSource(DB+'/notes/inbox/'+k+'.json');
+  ['put','patch'].forEach(ev=>inES.addEventListener(ev,e=>{try{const m=JSON.parse(e.data);handleMsgs(m.path,m.data)}catch(x){}}));
+}
+listen();
+
+/* ---------- mesaje primite de la viewer: se adaugă la finalul notițelor ---------- */
+(async()=>{
+  if(!DB||!window.EventSource)return;
+  try{await fetch(DB+'/notes/inbox.json',{method:'DELETE'})}catch(e){}
+  const seen=new Set();let first=true;
+  const add=txt=>{
+    const n=$('notes');
+    if(n.value&&!n.value.endsWith('\n'))n.value+='\n';
+    n.value+=txt+'\n';n.scrollTop=n.scrollHeight;
+    clearTimeout(saveT);saveT=setTimeout(push,200);
+  };
+  const es=new EventSource(DB+'/notes/inbox.json');
+  es.addEventListener('put',e=>{
+    let m;try{m=JSON.parse(e.data)}catch(x){return}
+    if(m.path==='/'){
+      const o=m.data||{};
+      Object.keys(o).sort().forEach(k=>{if(!seen.has(k)){seen.add(k);if(!first&&o[k]&&typeof o[k].text==='string')add(o[k].text)}});
+      first=false;return;
+    }
+    const id=m.path.split('/')[1];
+    if(!id||seen.has(id)||!m.data||typeof m.data.text!=='string')return;
+    seen.add(id);add(m.data.text);
+  });
+})();
 </script>
 </body>
 </html>
