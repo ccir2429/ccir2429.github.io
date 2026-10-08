@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Shorts Studio</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f6f5f2;--fg:#1c1b19;--card:#fff;--mut:#77746d;--bd:#e3e0d9;--ac:#e8432e;--ac2:#fff;--tr:#ebe8e1}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141413;--fg:#f0eee9;--card:#1f1e1c;--mut:#9a968c;--bd:#33312d;--ac:#ff5a43;--ac2:#fff;--tr:#2a2825}}
+:root[data-theme="dark"]{--bg:#141413;--fg:#f0eee9;--card:#1f1e1c;--mut:#9a968c;--bd:#33312d;--ac:#ff5a43;--ac2:#fff;--tr:#2a2825}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*:before,*:after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1120px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:22px;margin:0 0 4px;letter-spacing:-.3px} .sub{color:var(--mut);margin:0 0 16px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+input[type=text]{flex:1;min-width:200px;padding:10px 12px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--fg);font:inherit}
+button{font:inherit;padding:8px 12px;border-radius:10px;border:1px solid var(--bd);background:var(--card);color:var(--fg);cursor:pointer}
+button:hover{border-color:var(--mut)} button.pri{background:var(--ac);color:var(--ac2);border-color:var(--ac);font-weight:600}
+button.sm{padding:4px 8px;font-size:13px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;margin-top:16px}
+@media (max-width:860px){.grid{grid-template-columns:1fr}}
+.stack{display:flex;flex-direction:column;gap:12px}
+#stage{position:relative;aspect-ratio:16/9;background:#000;border-radius:10px;overflow:hidden;touch-action:none;cursor:crosshair}
+#stage iframe,#pv iframe,#stage video,#pv video{position:absolute;border:0;pointer-events:none}
+#stage iframe,#stage video{inset:0;width:100%;height:100%}
+#box{position:absolute;box-shadow:0 0 0 9999px rgba(0,0,0,.6);border:2px solid #fff;cursor:grab}
+#box:active{cursor:grabbing}
+#box:after{content:"9:16";position:absolute;left:4px;top:4px;font-size:11px;background:rgba(0,0,0,.6);color:#fff;padding:1px 5px;border-radius:5px}
+.tl{position:relative;height:44px;touch-action:none}
+#track{position:absolute;left:10px;right:10px;top:18px;height:10px;background:var(--tr);border-radius:6px;cursor:pointer}
+#sel{position:absolute;top:0;height:100%;background:var(--ac);opacity:.85;border-radius:6px}
+#ph{position:absolute;top:-8px;width:2px;height:26px;background:var(--fg);transform:translateX(-1px)}
+.h{position:absolute;top:-8px;width:18px;height:26px;margin-left:-9px;background:var(--ac);border:2px solid var(--card);border-radius:6px;cursor:ew-resize}
+.lbl{display:flex;justify-content:space-between;color:var(--mut);font-size:12px;padding:0 4px}
+.tf{display:flex;align-items:center;gap:6px}
+.tf label{color:var(--mut);font-size:13px;min-width:38px}
+.tf input{width:96px;padding:6px 8px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--fg);font:inherit;font-variant-numeric:tabular-nums}
+#pv{position:relative;width:min(100%,270px);aspect-ratio:9/16;margin:0 auto;background:#000;border-radius:18px;overflow:hidden;border:4px solid var(--fg)}
+pre{margin:0;padding:10px;background:var(--bg);border:1px solid var(--bd);border-radius:8px;white-space:pre-wrap;word-break:break-all;font-size:12px;max-height:140px;overflow:auto}
+.mut{color:var(--mut);font-size:13px} .warn{color:var(--ac)} h2{font-size:14px;margin:0 0 8px}
+input[type=range]{width:100%;accent-color:var(--ac)}
+.time{font-variant-numeric:tabular-nums;font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Shorts Studio</h1>
+  <p class="sub">Paste a YouTube link, pick the moment, frame it in 9:16, and preview.</p>
+  <div class="card row">
+    <input type="text" id="url" placeholder="https://www.youtube.com/watch?v=…" aria-label="YouTube URL">
+    <button class="pri" id="load">Load video</button><button id="loadf">Open local file</button><input type="file" id="file" accept="video/*" hidden>
+  </div>
+  <div id="msg" class="mut" style="margin-top:8px"></div>
+
+  <div class="grid" id="app" hidden>
+    <div class="stack">
+      <div class="card stack">
+        <div id="stage"><div id="box"></div></div>
+        <div class="row">
+          <button class="pri" id="play">▶ Play selection</button>
+          <button class="sm" data-seek="-60">−1m</button><button class="sm" data-seek="-10">−10s</button>
+          <button class="sm" data-seek="10">+10s</button><button class="sm" data-seek="60">+1m</button><button class="sm" data-seek="600">+10m</button>
+          <span class="time" id="cur" style="margin-left:auto">0:00</span>
+        </div>
+        <div class="tl" id="tl"><div id="track"><div id="sel"></div><div id="ph"></div><div class="h" id="hs"></div><div class="h" id="he"></div></div></div>
+        <div class="lbl"><span>0:00</span><span id="durl">–</span></div>
+        <div class="row" style="gap:18px">
+          <div class="tf"><label>Start</label><input id="ts"><button class="sm" data-n="s,-1">−1s</button><button class="sm" data-n="s,1">+1s</button><button class="sm" id="ss">Use playhead</button></div>
+          <div class="tf"><label>End</label><input id="te"><button class="sm" data-n="e,-1">−1s</button><button class="sm" data-n="e,1">+1s</button><button class="sm" id="se">Use playhead</button></div>
+        </div>
+        <div class="mut">Length: <b id="len">0s</b> <span id="lw" class="warn"></span> · Drag the white frame on the video to choose the crop, or click anywhere to center it.</div>
+      </div>
+    </div>
+
+    <div class="stack">
+      <div class="card stack">
+        <h2>Short preview (9:16)</h2>
+        <div id="pv"></div>
+        <div><div class="row" style="justify-content:space-between"><span class="mut">Crop size</span><span class="mut" id="zv">100%</span></div>
+        <input type="range" id="zoom" min="40" max="100" value="100"></div>
+        <div class="row"><button id="ctr">Center crop</button></div>
+      </div>
+      <div class="card stack">
+        <h2>Export</h2>
+        <div class="mut">Browsers can't download YouTube video, so run this locally to render the file:</div>
+        <pre id="cmd"></pre><div class="mut" id="rmsg" hidden></div><video id="rv" controls playsinline hidden style="width:min(100%,240px);margin:0 auto;border-radius:10px"></video>
+        <div class="row"><button class="pri" id="rend" hidden>Render short in browser</button><button id="cp">Copy commands</button><button id="cl">Copy clip link</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const S={id:null,dur:0,cur:0,pcur:0,start:0,end:30,cx:.34,cy:0,z:1,playing:false,init:false};
+let AR=16/9,MAXW=81/256;
+let main,prev;
+
+const fmt=t=>{t=Math.max(0,t);const h=Math.floor(t/3600),m=Math.floor(t%3600/60),s=t%60;
+  const ss=(Number.isInteger(s)?String(s):s.toFixed(1)).padStart(Number.isInteger(s)?2:4,'0');
+  return (h?h+':'+String(m).padStart(2,'0'):m)+':'+ss;};
+const parse=v=>{v=v.trim();if(!v)return NaN;const p=v.split(':').map(Number);if(p.some(isNaN))return NaN;return p.reduce((a,b)=>a*60+b,0);};
+const r1=x=>Math.round(x*10)/10;
+const cw=()=>MAXW*S.z, ch=()=>cw()*AR*16/9;
+
+function ytId(u){try{const x=new URL(u.trim());if(x.hostname.includes('youtu.be'))return x.pathname.slice(1,12);
+  if(x.searchParams.get('v'))return x.searchParams.get('v');const m=x.pathname.match(/\/(embed|shorts|live)\/([\w-]{11})/);return m?m[2]:null;}catch(e){return /^[\w-]{11}$/.test(u.trim())?u.trim():null;}}
+
+function mk(parent,muted){const f=document.createElement('iframe');
+  f.allow='autoplay; encrypted-media';
+  f.src=`https://www.youtube.com/embed/${S.id}?enablejsapi=1&controls=0&rel=0&modestbranding=1&playsinline=1&disablekb=1&iv_load_policy=3`;
+  parent.appendChild(f);
+  const hs=()=>{try{f.contentWindow.postMessage(JSON.stringify({event:'listening',id:1,channel:'widget'}),'*')}catch(e){}if(muted)cmd(f,'mute')};
+  f.addEventListener('load',()=>{hs();let n=0;const iv=setInterval(()=>{hs();if(++n>8||(S.dur&&!muted))clearInterval(iv)},700)});
+  return f;}
+function cmd(f,func,args){if(f instanceof HTMLVideoElement){if(func==='seekTo')f.currentTime=args[0];else if(func==='playVideo')f.play().catch(()=>{});else if(func==='pauseVideo')f.pause();else if(func==='mute')f.muted=true;return}
+  try{f.contentWindow.postMessage(JSON.stringify({event:'command',func,args:args||[]}),'*')}catch(e){}}
+function seek(t){S.cur=t;cmd(main,'seekTo',[t,true]);cmd(prev,'seekTo',[t,true]);draw();}
+
+window.addEventListener('message',e=>{
+  if(!main||(e.source!==main.contentWindow&&e.source!==prev.contentWindow))return;
+  let d;try{d=JSON.parse(e.data)}catch(x){return}
+  const i=d.info;if(!i)return;
+  if(e.source===prev.contentWindow){if(i.currentTime!=null)S.pcur=i.currentTime;return}
+  if(i.duration&&i.duration!==S.dur){S.dur=i.duration;if(!S.init){S.init=true;S.start=0;S.end=Math.min(30,S.dur);}$('#durl').textContent=fmt(S.dur);}
+  if(i.playerState!=null){S.playing=i.playerState===1||i.playerState===3;$('#play').textContent=S.playing?'⏸ Pause':'▶ Play selection';}
+  if(i.currentTime!=null){S.cur=i.currentTime;
+    if(S.playing){
+      if(S.cur>=S.end||S.cur<S.start-1)seek(S.start);
+      else if(Math.abs(S.pcur-S.cur)>.7){cmd(prev,'seekTo',[S.cur,true]);}
+    }}
+  draw();
+});
+
+function layoutBox(){
+  const b=$('#box');b.style.left=S.cx*100+'%';b.style.top=S.cy*100+'%';b.style.width=cw()*100+'%';b.style.height=ch()*100+'%';
+  const pv=$('#pv');if(!prev)return;const W=pv.clientWidth,iw=W/cw(),ih=iw/AR;
+  Object.assign(prev.style,{width:iw+'px',height:ih+'px',left:-S.cx*iw+'px',top:-S.cy*ih+'px'});
+}
+function clampCrop(){S.cx=Math.min(Math.max(0,S.cx),1-cw());S.cy=Math.min(Math.max(0,S.cy),1-ch());}
+
+function clipLink(){return `https://www.youtube.com/embed/${S.id}?start=${Math.floor(S.start)}&end=${Math.ceil(S.end)}`}
+function draw(){
+  const D=S.dur||1,pc=x=>Math.min(100,Math.max(0,x/D*100))+'%';
+  $('#sel').style.left=pc(S.start);$('#sel').style.width=(pc(S.end).slice(0,-1)-pc(S.start).slice(0,-1))+'%';
+  $('#hs').style.left=pc(S.start);$('#he').style.left=pc(S.end);$('#ph').style.left=pc(S.cur);
+  $('#cur').textContent=fmt(S.cur);
+  if(document.activeElement.id!=='ts')$('#ts').value=fmt(S.start);
+  if(document.activeElement.id!=='te')$('#te').value=fmt(S.end);
+  const L=S.end-S.start;$('#len').textContent=r1(L)+'s';
+  $('#lw').textContent=L>180?'· longer than 3 min — too long for a Short':L>60?'· over 60s (OK for newer 3-min Shorts)':'';
+  $('#zv').textContent=Math.round(S.z*100)+'%';
+  layoutBox();
+  const p=n=>(n*100).toFixed(2)/1;
+  const crop=`crop=trunc(iw*${r1(cw()*1000)/1000}/2)*2:trunc(iw*${r1(cw()*1000)/1000}*16/9/2)*2:iw*${p(S.cx)/100}:ih*${p(S.cy)/100},scale=1080:1920`;
+  $('#cmd').textContent=S.local?`ffmpeg -ss ${S.start} -to ${S.end} -i "${S.name}" -vf "${crop}" -c:a aac short.mp4`:`yt-dlp -f "bv*+ba/b" --download-sections "*${fmt(S.start)}-${fmt(S.end)}" -o clip.mp4 "https://youtu.be/${S.id}"\n\nffmpeg -i clip.mp4 -vf "${crop}" -c:a copy short.mp4`;
+}
+
+function setT(k,v){if(isNaN(v))return draw();v=r1(Math.min(Math.max(0,v),S.dur||v));
+  if(k==='s'){S.start=Math.min(v,S.end-.5);seek(S.start)}else{S.end=Math.max(v,S.start+.5);seek(Math.max(S.start,S.end-3))}draw();}
+
+function load(){
+  const id=ytId($('#url').value);if(!id){$('#msg').textContent='That doesn\'t look like a YouTube link.';return}
+  AR=16/9;MAXW=81/256;S.local=false;$('#stage').style.aspectRatio='16/9';$('#rend').hidden=true;
+  $('#msg').textContent='Loading… (if the player stays black, the video may block embedding)';
+  Object.assign(S,{id,local:false,dur:0,cur:0,pcur:0,start:0,end:30,init:false,playing:false});
+  $('#app').hidden=false;
+  for(const el of [$('#stage'),$('#pv')])el.querySelectorAll('iframe,video').forEach(f=>f.remove());
+  main=mk($('#stage'),false);prev=mk($('#pv'),true);
+  $('#stage').insertBefore(main,$('#box'));
+  clampCrop();draw();
+}
+
+function loadLocal(f){
+  Object.assign(S,{id:'local',local:true,name:f.name,dur:0,cur:0,pcur:0,start:0,end:30,init:false,playing:false});
+  $('#app').hidden=false;$('#rend').hidden=false;
+  document.querySelectorAll('#stage iframe,#stage video,#pv iframe,#pv video').forEach(n=>n.remove());
+  const url=URL.createObjectURL(f);
+  const mkv=m=>{const v=document.createElement('video');v.src=url;v.playsInline=true;v.preload='auto';if(m)v.muted=true;return v};
+  main=mkv(false);prev=mkv(true);
+  $('#stage').insertBefore(main,$('#box'));$('#pv').appendChild(prev);
+  main.addEventListener('loadedmetadata',()=>{AR=main.videoWidth/main.videoHeight;MAXW=Math.min(1,9/16/AR);
+    $('#stage').style.aspectRatio=AR;S.dur=main.duration;S.init=true;S.end=Math.min(30,S.dur);$('#durl').textContent=fmt(S.dur);
+    S.z=1;$('#zoom').value=100;S.cx=(1-cw())/2;S.cy=0;clampCrop();draw();});
+  ['play','pause'].forEach(ev=>main.addEventListener(ev,()=>{S.playing=!main.paused;
+    $('#play').textContent=S.playing?'⏸ Pause':'▶ Play selection';if(!S.playing)prev.pause();}));
+  $('#msg').textContent='Local file: '+f.name+' (stays on your device, nothing is uploaded)';
+  requestAnimationFrame(loop);
+}
+let rec=null;
+function loop(){
+  if(!S.local)return;
+  S.cur=main.currentTime;
+  if(S.playing){
+    if(S.cur>=S.end||S.cur<S.start-1){rec?stopRec():seek(S.start)}
+    else if(Math.abs(prev.currentTime-S.cur)>.2)prev.currentTime=S.cur;
+  }
+  if(rec){const W=rec.c.width,H=rec.c.height,sw=cw()*main.videoWidth,sh=sw*16/9;
+    rec.g.drawImage(main,S.cx*main.videoWidth,S.cy*main.videoHeight,sw,sh,0,0,W,H);
+    $('#rmsg').textContent='Rendering… '+Math.round((S.cur-S.start)/(S.end-S.start)*100)+'% (plays in real time)';}
+  draw();requestAnimationFrame(loop);
+}
+function stopRec(){if(rec&&rec.mr.state!=='inactive')rec.mr.stop();cmd(main,'pauseVideo');}
+async function render(){
+  if(rec||!S.local)return;
+  const c=document.createElement('canvas');c.width=720;c.height=1280;
+  const stream=c.captureStream(30);
+  try{main.captureStream().getAudioTracks().forEach(t=>stream.addTrack(t))}catch(e){}
+  const mime=['video/mp4;codecs=avc1','video/webm;codecs=vp9,opus','video/webm'].find(m=>MediaRecorder.isTypeSupported(m));
+  const mr=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:6e6}),ch=[];
+  mr.ondataavailable=e=>e.data.size&&ch.push(e.data);
+  mr.onstop=async()=>{
+    const ext=mime.includes('mp4')?'mp4':'webm',blob=new Blob(ch,{type:'video/'+ext});rec=null;
+    $('#rend').disabled=false;const rv=$('#rv');rv.src=URL.createObjectURL(blob);rv.hidden=false;
+    $('#rmsg').innerHTML='Done. <button class="sm" id="sv">Save short.'+ext+'</button>';
+    $('#sv').onclick=async()=>{try{const d=await claude.use('downloads');if(!d)throw 0;await d.save({filename:'short.'+ext,data:blob})}
+      catch(e){$('#rmsg').textContent='Save unavailable here: right-click / long-press the video above and choose Save video.'}};
+  };
+  rec={mr,c,g:c.getContext('2d')};$('#rend').disabled=true;$('#rmsg').hidden=false;$('#rv').hidden=true;
+  seek(S.start);await new Promise(r=>setTimeout(r,500));
+  mr.start(1000);cmd(main,'playVideo');cmd(prev,'playVideo');
+}
+$('#rend').onclick=render;
+$('#loadf').onclick=()=>$('#file').click();
+$('#file').onchange=e=>{const f=e.target.files[0];if(f)loadLocal(f)};
+$('#load').onclick=load;$('#url').addEventListener('keydown',e=>{if(e.key==='Enter')load()});
+$('#play').onclick=()=>{
+  if(S.playing){cmd(main,'pauseVideo');cmd(prev,'pauseVideo');return}
+  if(S.cur<S.start||S.cur>=S.end-.3)seek(S.start);
+  cmd(main,'playVideo');cmd(prev,'playVideo');};
+document.querySelectorAll('[data-seek]').forEach(b=>b.onclick=()=>seek(Math.min(S.dur,Math.max(0,S.cur+ +b.dataset.seek))));
+document.querySelectorAll('[data-n]').forEach(b=>b.onclick=()=>{const[k,d]=b.dataset.n.split(',');setT(k,(k==='s'?S.start:S.end)+ +d)});
+$('#ss').onclick=()=>setT('s',S.cur);$('#se').onclick=()=>setT('e',S.cur);
+$('#ts').onchange=e=>setT('s',parse(e.target.value));$('#te').onchange=e=>setT('e',parse(e.target.value));
+$('#ts').onblur=$('#te').onblur=draw;
+
+// timeline dragging
+let drag=null;const tr=$('#track');
+const tAt=e=>{const r=tr.getBoundingClientRect();return Math.min(1,Math.max(0,(e.clientX-r.left)/r.width))*S.dur};
+['hs','he'].forEach(id=>$('#'+id).addEventListener('pointerdown',e=>{drag=id;e.stopPropagation();e.target.setPointerCapture(e.pointerId)}));
+window.addEventListener('pointermove',e=>{if(!drag)return;const t=r1(tAt(e));
+  if(drag==='hs')S.start=Math.min(t,S.end-.5);else S.end=Math.max(t,S.start+.5);draw()});
+window.addEventListener('pointerup',()=>{if(drag){seek(drag==='hs'?S.start:Math.max(S.start,S.end-3));drag=null}});
+tr.addEventListener('pointerdown',e=>{if(e.target===tr||e.target.id==='sel')seek(Math.round(tAt(e)))});
+
+// crop dragging
+const st=$('#stage');let cd=null;
+st.addEventListener('pointerdown',e=>{const r=st.getBoundingClientRect();
+  const fx=(e.clientX-r.left)/r.width,fy=(e.clientY-r.top)/r.height;
+  const inside=fx>=S.cx&&fx<=S.cx+cw()&&fy>=S.cy&&fy<=S.cy+ch();
+  if(!inside){S.cx=fx-cw()/2;S.cy=fy-ch()/2;clampCrop();draw()}
+  cd={x:e.clientX,y:e.clientY,cx:S.cx,cy:S.cy,r};st.setPointerCapture(e.pointerId)});
+st.addEventListener('pointermove',e=>{if(!cd)return;
+  S.cx=cd.cx+(e.clientX-cd.x)/cd.r.width;S.cy=cd.cy+(e.clientY-cd.y)/cd.r.height;clampCrop();draw()});
+st.addEventListener('pointerup',()=>cd=null);
+$('#zoom').oninput=e=>{const mx=S.cx+cw()/2,my=S.cy+ch()/2;S.z=e.target.value/100;S.cx=mx-cw()/2;S.cy=my-ch()/2;clampCrop();draw()};
+$('#ctr').onclick=()=>{S.cx=(1-cw())/2;S.cy=(1-ch())/2;clampCrop();draw()};
+window.addEventListener('resize',layoutBox);
+
+const copy=async(t,b)=>{try{await navigator.clipboard.writeText(t);const o=b.textContent;b.textContent='Copied ✓';setTimeout(()=>b.textContent=o,1200)}catch(e){b.textContent='Copy failed'}};
+$('#cp').onclick=e=>copy($('#cmd').textContent,e.target);$('#cl').onclick=e=>copy(clipLink(),e.target);
+</script>
+</body>
+</html>
