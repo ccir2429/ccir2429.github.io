@@ -55,6 +55,11 @@ li button{padding:0 8px;border:0;background:none;color:var(--rec)}
 @media(max-width:900px){.notes{position:static;height:auto}.notes section{min-height:280px}}
 .notes{gap:16px}
 select{font:inherit;color:inherit;background:var(--field);border:1px solid var(--line);border-radius:4px;padding:8px;max-width:100%}
+.team{flex:1;min-height:0;overflow:auto;background:var(--field);border:1px solid var(--line);border-radius:4px;padding:6px;margin-top:8px}
+.grp{margin-bottom:10px}
+.tm{padding:4px 7px;border-radius:3px;cursor:pointer;overflow-wrap:anywhere}
+.tm:hover{background:var(--line)}
+.tm[aria-selected=true]{background:var(--acc);color:#fff}
 .notes textarea{flex:1;resize:none;margin-top:8px}
 .msg{font-size:13px;color:var(--mute);min-height:1.2em;margin-top:6px}
 </style>
@@ -66,7 +71,7 @@ select{font:inherit;color:inherit;background:var(--field);border:1px solid var(-
     <h1>Capitole YouTube Live</h1>
     <p class="s">Lipește linkul transmisiunii, apoi apasă butonul la fiecare schimbare de act.</p>
     <div class="row" style="margin-top:10px">
-      <input type="text" id="url" placeholder="https://www.youtube.com/watch?v=… sau ID video" aria-label="Link YouTube">
+      <input type="text" id="url" placeholder="Gol = live-ul canalului. Sau link / ID video" aria-label="Link YouTube">
       <button id="load">Încarcă</button>
     </div>
     <div class="vid" id="vid"></div>
@@ -132,11 +137,12 @@ select{font:inherit;color:inherit;background:var(--field);border:1px solid var(-
   </section>
   <section style="flex:1;display:flex;flex-direction:column;min-height:0">
     <h2>Mesaje echipă</h2>
-    <textarea id="team" readonly aria-label="Mesaje echipă"></textarea>
-    <div class="row" style="margin-top:8px">
-      <select id="to" aria-label="Destinatar"></select>
+    <div id="team" class="team" role="listbox" aria-label="Mesaje echipă"></div>
+    <p class="s" id="rto" style="margin-top:8px" aria-live="polite"></p>
+    <div class="row">
       <input type="text" id="rtxt" maxlength="500" placeholder="Răspuns" aria-label="Răspuns">
-      <button id="rsend">Trimite</button>
+      <button id="rsend" disabled>Răspunde</button>
+      <button id="rall">Trimite tuturor</button>
     </div>
     <div class="row" style="margin-top:6px"><button id="rban">Retrage bannerul</button><button id="tclr">Șterge mesajele</button></div>
     <p class="s" id="tstat" aria-live="polite" style="margin-top:6px"></p>
@@ -186,21 +192,34 @@ $('mstop').onclick=()=>{manual=null};
 /* ---------- player ---------- */
 function vidId(s){s=s.trim();if(/^[\w-]{11}$/.test(s))return s;
   const m=s.match(/(?:v=|youtu\.be\/|\/live\/|\/embed\/|\/shorts\/)([\w-]{11})/);return m?m[1]:null}
-let beat=null;
-$('load').onclick=()=>{
-  const id=vidId($('url').value);if(!id){say('Link YouTube invalid.');return}
-  store.set('cl_url',$('url').value);
+let beat=null,mode='channel',lastLoad=0;
+function mount(path){
+  lastLoad=Date.now();
   const f=document.createElement('iframe');
   f.allow='autoplay; encrypted-media; picture-in-picture; fullscreen';f.allowFullscreen=true;
-  f.src=`https://www.youtube.com/embed/${id}?enablejsapi=1&mute=1&autoplay=1&playsinline=1&origin=${encodeURIComponent(location.origin)}`;
-  $('vid').innerHTML='';$('vid').appendChild(f);playerT=null;
+  f.src=`https://www.youtube.com/embed/${path}enablejsapi=1&mute=1&autoplay=1&playsinline=1&origin=${encodeURIComponent(location.origin)}`;
+  $('vid').innerHTML='';$('vid').appendChild(f);playerT=null;playerSeen=0;
   clearInterval(beat);
   const listen=()=>{try{f.contentWindow.postMessage(JSON.stringify({event:'listening',id:1,channel:'widget'}),'*');
     f.contentWindow.postMessage(JSON.stringify({event:'command',func:'addEventListener',args:['onStateChange'],id:1,channel:'widget'}),'*')}catch(e){}};
   f.onload=listen;beat=setInterval(()=>{if(Date.now()-playerSeen>3000)listen()},1500);
+}
+function chanId(){const c=((window.CFG&&CFG.channelId)||store.get('cl_chan','')||'').trim();return /^UC[\w-]{22}$/.test(c)?c:''}
+function loadChannel(){
+  const c=chanId();
+  if(!c){say('Lipsește ID-ul canalului: setează channelId în config.js sau lipește-l (UC…) în câmpul de link.');return false}
+  mode='channel';mount('live_stream?channel='+c+'&');return true;
+}
+$('load').onclick=()=>{
+  const v=$('url').value.trim(),ch=v.match(/UC[\w-]{22}/);
+  if(!v){loadChannel();return}
+  if(ch){store.set('cl_chan',ch[0]);loadChannel();return}
+  const id=vidId(v);if(!id){say('Link YouTube invalid.');return}
+  mode='video';mount(id+'?');
 };
+// dacă transmisiunea canalului nu a pornit încă, reîncearcă din minut în minut
+setInterval(()=>{if(mode==='channel'&&Date.now()-playerSeen>60000&&Date.now()-lastLoad>60000)loadChannel()},15000);
 $('url').addEventListener('keydown',e=>{if(e.key==='Enter')$('load').click()});
-$('url').value=store.get('cl_url','');
 
 /* ---------- lists ---------- */
 function addTo(arr,key,v){v=norm(v);if(!v)return;if(!arr.some(x=>lower(x)===lower(v))){arr.push(v);arr.sort(collator.compare);store.set(key,arr)}}
@@ -264,6 +283,7 @@ $('dl').onclick=()=>{const a=document.createElement('a');a.href=URL.createObject
 $('clr').onclick=()=>{if(chapters.length&&confirm('Ștergi toate capitolele?')){chapters=[];renderChapters()}};
 
 renderLists();renderChapters();
+loadChannel(); // ultimul pas: say() și restul variabilelor există deja
 
 /* ---------- notes sync (Firebase Realtime Database, REST) ---------- */
 const DB=((window.CFG&&CFG.dbUrl)||'').replace(/\/+$/,'');
@@ -293,15 +313,35 @@ function items(path,data){const a=[];
   if(path==='/'){if(data&&typeof data==='object')for(const id in data)a.push([id,data[id]])}
   else if(data&&typeof data==='object')a.push([path.slice(1),data]);
   return a.sort((x,y)=>((x[1]&&x[1].at)||0)-((y[1]&&y[1].at)||0))}
-function renderTeam(){
-  const ps=Object.values(people).sort((a,b)=>collator.compare(a.name,b.name));
-  $('team').value=ps.map(p=>p.msgs.map(x=>p.name+' : '+x.m).join('\n')).join('\n\n');
-  $('team').scrollTop=$('team').scrollHeight;
-  const sel=$('to'),cur=sel.value;
-  sel.innerHTML='<option value="*">Toți (banner)</option>'+ps.map(p=>`<option value="${esc(p.name.toLowerCase())}">${esc(p.name)}</option>`).join('');
-  if([...sel.options].some(o=>o.value===cur))sel.value=cur;
+let sel=null;
+// dacă mai multe sesiuni folosesc aceeași poreclă, le deosebim prin număr: Ana (1), Ana (2)
+const lbl=(p,x)=>p.name+(p.cids.length>1&&x.c?' ('+(p.cids.indexOf(x.c)+1)+')':'');
+function selMsg(){if(!sel)return null;const p=people[sel.k],m=p&&p.msgs.find(x=>x.id===sel.id);return m?{p,m}:null}
+function renderTeam(scroll=true){
+  if(sel&&!selMsg())sel=null;
+  const box=$('team'),st=box.scrollTop;box.innerHTML='';
+  const ps=Object.keys(people).map(k=>[k,people[k]]).sort((a,b)=>collator.compare(a[1].name,b[1].name));
+  if(!ps.length)box.innerHTML='<div class="s" style="padding:4px">Niciun mesaj încă.</div>';
+  for(const [k,p] of ps){
+    const g=document.createElement('div');g.className='grp';
+    for(const x of p.msgs){
+      const d=document.createElement('div');d.className='tm';d.tabIndex=0;d.setAttribute('role','option');
+      d.dataset.k=k;d.dataset.id=x.id;
+      d.setAttribute('aria-selected',sel&&sel.k===k&&sel.id===x.id?'true':'false');
+      d.textContent=lbl(p,x)+' : '+x.m;g.appendChild(d);
+    }
+    box.appendChild(g);
+  }
+  box.scrollTop=scroll?box.scrollHeight:st;
+  const s0=selMsg();
+  $('rto').textContent=s0?'Răspuns către '+lbl(s0.p,s0.m)+' (apasă din nou pe mesaj pentru a anula)':'Selectează un mesaj pentru a răspunde.';
+  $('rsend').disabled=!s0;
   store.set('cl_people',people);
 }
+$('team').addEventListener('click',e=>{const d=e.target.closest('.tm');if(!d)return;
+  sel=(sel&&sel.k===d.dataset.k&&sel.id===d.dataset.id)?null:{k:d.dataset.k,id:d.dataset.id};
+  renderTeam(false);if(sel)$('rtxt').focus()});
+$('team').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('tm')){e.preventDefault();e.target.click()}});
 function handleMsgs(path,data){
   let added=false;
   for(const [id,m] of items(path,data)){
@@ -310,7 +350,7 @@ function handleMsgs(path,data){
     const name=String(m.n||'Anonim').slice(0,40),k='n:'+name.toLowerCase();
     const p=people[k]||(people[k]={name,cids:[],msgs:[]});
     if(m.c&&!p.cids.includes(String(m.c)))p.cids.push(String(m.c).slice(0,40));
-    p.msgs.push({id,m:m.m.slice(0,500),at:m.at||Date.now()});
+    p.msgs.push({id,m:m.m.slice(0,500),at:m.at||Date.now(),c:m.c?String(m.c).slice(0,40):''});
     added=true;
     fetch(DB+'/notes/inbox/'+$('key').value.trim()+'/'+encodeURIComponent(id)+'.json',{method:'DELETE'}).catch(()=>{});
   }
@@ -331,22 +371,26 @@ async function fb(method,path,body){
   if(!r.ok)throw new Error(r.status+' '+(await r.text()).slice(0,120));
 }
 async function reply(){
-  const m=$('rtxt').value.trim(),k=$('key').value.trim(),to=$('to').value;
+  const m=$('rtxt').value.trim(),k=$('key').value.trim(),t=selMsg();
+  if(!t){tst('Selectează un mesaj sau folosește Trimite tuturor.');return}
   if(!m){tst('Scrie un răspuns.');return}
   if(!KEYOK.test(k)){tst('Introdu cheia de scriere.');return}
+  const cids=t.m.c?[t.m.c]:t.p.cids;
+  if(!cids.length){tst('Nu am un identificator pentru acest vizualizator.');return}
   try{
-    if(to==='*'){await fb('PUT','/notes/out/'+k+'/all',{m,at:Date.now(),id:rid()});tst('Trimis tuturor (banner).')}
-    else{
-      const p=people['n:'+to];
-      if(!p||!p.cids.length){tst('Nu am un identificator pentru acest vizualizator.');return}
-      await Promise.all(p.cids.map(c=>fb('PUT','/notes/out/'+k+'/to/'+encodeURIComponent(c)+'/'+rid(),{m,at:Date.now()})));
-      tst('Trimis către '+p.name+'.');
-    }
-    $('rtxt').value='';
+    await Promise.all(cids.map(c=>fb('PUT','/notes/out/'+k+'/to/'+encodeURIComponent(c)+'/'+rid(),{m,re:t.m.m.slice(0,80),at:Date.now()})));
+    tst('Răspuns trimis către '+lbl(t.p,t.m)+'.');$('rtxt').value='';
   }catch(e){tst('Eroare la trimitere: '+e.message)}
 }
-$('rsend').onclick=reply;
-$('rtxt').addEventListener('keydown',e=>{if(e.key==='Enter')reply()});
+async function sendAll(){
+  const m=$('rtxt').value.trim(),k=$('key').value.trim();
+  if(!m){tst('Scrie un mesaj.');return}
+  if(!KEYOK.test(k)){tst('Introdu cheia de scriere.');return}
+  try{await fb('PUT','/notes/out/'+k+'/all',{m,at:Date.now(),id:rid()});tst('Trimis tuturor (banner).');$('rtxt').value=''}
+  catch(e){tst('Eroare la trimitere: '+e.message)}
+}
+$('rsend').onclick=reply;$('rall').onclick=sendAll;
+$('rtxt').addEventListener('keydown',e=>{if(e.key==='Enter'){if(selMsg())reply();else tst('Selectează un mesaj sau apasă Trimite tuturor.')}});
 $('rban').onclick=async()=>{const k=$('key').value.trim();if(!KEYOK.test(k))return;
   try{await fb('DELETE','/notes/out/'+k+'/all');tst('Banner retras.')}catch(e){tst('Eroare: '+e.message)}};
 $('tclr').onclick=()=>{if(confirm('Ștergi toate mesajele primite?')){people={};renderTeam()}};

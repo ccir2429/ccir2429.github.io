@@ -20,7 +20,7 @@ input,button{font:inherit;color:inherit;background:var(--field);border:1px solid
 button{cursor:pointer}
 .row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 .row input{flex:1 1 140px;min-width:0}
-#msg{flex:3 1 220px}
+#msg{flex:1 1 220px}
 #banner{display:flex;gap:10px;align-items:flex-start;background:#ffcf33;color:#1d1600;border:2px solid #b88a00;border-radius:4px;padding:10px 12px;margin-bottom:10px;font-weight:700}
 #banner[hidden]{display:none}
 #banner span{flex:1;overflow-wrap:anywhere}
@@ -39,13 +39,15 @@ textarea{min-height:120px;flex:1;resize:none;width:100%;background:var(--field);
   <textarea id="t" readonly aria-label="Notițe rapide, doar citire"></textarea>
   <div id="rep" hidden aria-live="polite"></div>
   <div class="row">
-    <input type="text" id="nick" maxlength="40" placeholder="Poreclă (opțional)" aria-label="Poreclă">
-    <input type="password" id="key" placeholder="Cheie de scriere" autocomplete="off" aria-label="Cheie de scriere">
-  </div>
-  <div class="row">
-    <input type="text" id="msg" maxlength="500" placeholder="Scrie un mesaj pentru notițe" aria-label="Mesaj">
+    <input type="text" id="msg" maxlength="500" placeholder="Scrie un mesaj pentru echipă" aria-label="Mesaj">
     <button id="send">Trimite</button>
   </div>
+  <details id="set" style="margin-top:8px"><summary>Setări (poreclă și cheie)</summary>
+    <div class="row">
+      <input type="text" id="nick" maxlength="40" placeholder="Poreclă (opțional)" aria-label="Poreclă">
+      <input type="password" id="key" placeholder="Cheie de scriere" autocomplete="off" aria-label="Cheie de scriere">
+    </div>
+  </details>
   <p id="ss" aria-live="polite" style="margin:6px 0 0"></p>
   <form id="f">
     <input id="m" maxlength="500" placeholder="Scrie o informație pentru aplicația principală" autocomplete="off" aria-label="Mesaj">
@@ -82,14 +84,16 @@ const ls={get(k){try{return localStorage.getItem(k)||''}catch(e){return ''}},set
 $('nick').value=ls.get('v_nick');$('key').value=ls.get('v_key');
 $('nick').addEventListener('change',()=>ls.set('v_nick',$('nick').value.trim()));
 $('key').addEventListener('change',()=>ls.set('v_key',$('key').value.trim()));
-let cid=ls.get('v_cid');if(!cid){cid=Array.from(crypto.getRandomValues(new Uint8Array(12)),x=>(x%36).toString(36)).join('');ls.set('v_cid',cid)}
+// identificator unic per sesiune (per filă): două vizualizatoare în același browser nu se amestecă
+let cid='';try{cid=sessionStorage.getItem('v_cid')||''}catch(e){}
+if(!cid){cid=Array.from(crypto.getRandomValues(new Uint8Array(12)),x=>(x%36).toString(36)).join('');try{sessionStorage.setItem('v_cid',cid)}catch(e){}}
 async function send(){
   const m=$('msg').value.trim(),k=$('key').value.trim(),n=$('nick').value.trim()||'Anonim';
   if(!DB){ss.textContent='Lipsește dbUrl în config.js.';return}
   if(!m){ss.textContent='Scrie un mesaj.';return}
   if(!KEYOK.test(k)){ss.textContent='Introdu cheia de scriere (minim 8 caractere: litere, cifre, - sau _).';return}
   ls.set('v_nick',n==='Anonim'?'':n);ls.set('v_key',k);
-  const id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  const id=cid.slice(0,6)+'-'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
   $('send').disabled=true;
   try{
     const r=await fetch(DB+'/notes/inbox/'+k+'/'+id+'.json',{method:'PUT',body:JSON.stringify({n,m,c:cid,at:Date.now()})});
@@ -114,11 +118,12 @@ function listenOut(){
     else if(m.data&&typeof m.data==='object')list.push([m.path.slice(1),m.data]);
     list.sort((a,b)=>(a[1].at||0)-(b[1].at||0));
     for(const [id,x] of list){if(shown.has(id)||typeof x.m!=='string')continue;shown.add(id);
-      const d=document.createElement('div');d.textContent='Echipă: '+x.m;$('rep').appendChild(d);$('rep').hidden=false;$('rep').scrollTop=$('rep').scrollHeight}}catch(x){}};
+      const d=document.createElement('div');d.textContent='Echipă'+(typeof x.re==='string'&&x.re?' (răspuns la „'+x.re+'”)':'')+': '+x.m;$('rep').appendChild(d);$('rep').hidden=false;$('rep').scrollTop=$('rep').scrollHeight}}catch(x){}};
   ['put','patch'].forEach(ev=>esTo.addEventListener(ev,onTo));
 }
 $('bx').onclick=()=>{$('banner').hidden=true};
 $('key').addEventListener('change',listenOut);
+if(!KEYOK.test($('key').value.trim()))$('set').open=true;
 listenOut();
 $('send').onclick=send;
 $('msg').addEventListener('keydown',e=>{if(e.key==='Enter')send()});
