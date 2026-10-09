@@ -1,422 +1,98 @@
 <!DOCTYPE html>
 <html lang="ro">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Capitole YouTube Live</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap">
-<style>
-:root{--bg:#e8ecef;--panel:#fff;--ink:#16212a;--mute:#5b6a76;--line:#c9d2d9;--acc:#1b4fd6;--rec:#d6281b;--recink:#fff;--field:#f5f7f9;
-box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12181d;--panel:#1b242b;--ink:#e6ecf0;--mute:#8a9aa6;--line:#2f3c46;--acc:#6f9bff;--field:#141b20}}
-:root[data-theme="dark"]{--bg:#12181d;--panel:#1b242b;--ink:#e6ecf0;--mute:#8a9aa6;--line:#2f3c46;--acc:#6f9bff;--field:#141b20}
-html{scroll-padding-top:env(safe-area-inset-top,0px)}
-*,*::before,*::after{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Archivo,system-ui,sans-serif}
-.wrap{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:16px;max-width:1500px;margin:0 auto;padding:16px}
-@media(max-width:900px){.wrap{grid-template-columns:1fr}}
-.col{display:flex;flex-direction:column;gap:16px;min-width:0}
-section{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px}
-h1{font-size:20px;font-weight:800;margin:0 0 2px}
-h2{font-size:15px;font-weight:600;margin:0 0 10px}
-p.s{margin:0;color:var(--mute);font-size:13px}
-input,textarea,button{font:inherit;color:inherit}
-input[type=text],textarea{width:100%;background:var(--field);border:1px solid var(--line);border-radius:4px;padding:8px 10px}
-input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
-button{border:1px solid var(--line);background:var(--field);border-radius:4px;padding:8px 12px;cursor:pointer}
-button:hover{border-color:var(--acc)}
-.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.row>input[type=text]{flex:1 1 160px;width:auto}
-.vid{aspect-ratio:16/9;background:#000;border-radius:4px;overflow:hidden;margin-top:10px}
-.vid iframe{width:100%;height:100%;border:0}
-.clock{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-top:10px}
-.clock b{font-size:34px;font-weight:800;font-variant-numeric:tabular-nums}
-.src{font-size:13px;color:var(--mute)}
-.src.ok{color:#14803c}
-.rec{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
-.rec label{display:block;font-size:13px;color:var(--mute);margin-bottom:3px}
-.btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
-.btns button{padding:14px;font-weight:800;font-size:16px;background:var(--rec);color:var(--recink);border-color:var(--rec)}
-.btns button.alt{background:transparent;color:var(--rec)}
-@media(max-width:560px){.rec,.btns{grid-template-columns:1fr}}
-.ch{display:grid;grid-template-columns:78px 28px 1fr 1fr 1.4fr 32px;gap:6px;margin-bottom:6px;align-items:center}
-.ch input[type=text]{padding:5px 7px}
-.ch input[type=checkbox]{justify-self:center}
-.chs{overflow-x:auto}.chs .in{min-width:640px}
-.hd{font-size:12px;color:var(--mute)}
-.del{padding:4px 0;color:var(--rec)}
-#out{min-height:140px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;margin-top:8px}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-@media(max-width:700px){.two{grid-template-columns:1fr}}
-ul{list-style:none;margin:8px 0 0;padding:0;max-height:220px;overflow:auto}
-li{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid var(--line)}
-li button{padding:0 8px;border:0;background:none;color:var(--rec)}
-.notes{position:sticky;top:calc(16px + env(safe-area-inset-top,0px));height:calc(100vh - 32px);display:flex;flex-direction:column}
-@media(max-width:900px){.notes{position:static;height:auto}.notes section{min-height:280px}}
-.notes{gap:16px}
-select{font:inherit;color:inherit;background:var(--field);border:1px solid var(--line);border-radius:4px;padding:8px;max-width:100%}
-.team{flex:1;min-height:0;overflow:auto;background:var(--field);border:1px solid var(--line);border-radius:4px;padding:6px;margin-top:8px}
-.th{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 8px;margin-bottom:8px}
-.thh{display:flex;justify-content:space-between;align-items:center}
-.th.new strong::after{content:" ●";color:var(--rec)}
-.cv{max-height:150px;overflow:auto;margin:4px 0}
-.bub{max-width:88%;width:fit-content;padding:4px 9px;border-radius:10px;margin:3px 0;overflow-wrap:anywhere;font-size:14px;background:var(--line)}
-.bub.m{background:var(--acc);color:#fff;margin-left:auto}
-.notes textarea{flex:1;resize:none;margin-top:8px}
-.msg{font-size:13px;color:var(--mute);min-height:1.2em;margin-top:6px}
-</style>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Capitole YouTube Live</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap">
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<div class="wrap">
-<div class="col">
-  <section>
-    <h1>Capitole YouTube Live</h1>
-    <p class="s">Lipește linkul transmisiunii, apoi apasă butonul la fiecare schimbare de act.</p>
-    <div class="row" style="margin-top:10px">
-      <input type="text" id="url" placeholder="Gol = live-ul canalului. Sau link / ID video" aria-label="Link YouTube">
-      <button id="load">Încarcă</button>
+    <div class="wrap">
+        <div class="col">
+            <section>
+                <h1>Capitole YouTube Live</h1>
+                <p class="s">Lipește linkul transmisiunii, apoi apasă butonul la fiecare schimbare de slujbă.</p>
+                <div class="row" style="margin-top:10px">
+                    <input type="text" id="url" placeholder="Gol = live-ul canalului. Sau link / ID video" aria-label="Link YouTube">
+                    <button id="load">Încarcă</button>
+                </div>
+                <div class="vid" id="vid"></div>
+                <div class="clock">
+                    <b id="clock">--:--</b>
+                    <span class="src" id="src">Fără sursă de timp</span>
+                </div>
+                <details style="margin-top:8px">
+                    <summary class="s" style="cursor:pointer">Ceas manual (dacă timpul din player nu este disponibil)</summary>
+                    <div class="row" style="margin-top:8px">
+                        <input type="text" id="mstart" value="0:00" aria-label="Timp de start manual">
+                        <button id="mgo">Pornește ceas manual</button><button id="mstop">Oprește</button>
+                    </div>
+                </details>
+
+                <div class="rec">
+                    <div><label for="act">Slujbă</label><input type="text" id="act" list="acts" autocomplete="off"></div>
+                    <div><label for="person">Persoană</label><input type="text" id="person" list="persons" autocomplete="off"></div>
+                </div>
+                <datalist id="acts"></datalist><datalist id="persons"></datalist>
+                <div class="btns">
+                    <button id="rec">inregistreaza</button>
+                    <button id="recA" class="alt">inregistreaza(aprox)</button>
+                </div>
+                <div class="msg" id="msg" aria-live="polite"></div>
+            </section>
+
+            <section>
+                <h2>Capitole</h2>
+                <div class="chs"><div class="in" id="list"></div></div>
+                <textarea id="out" readonly aria-label="Text capitole"></textarea>
+                <div class="row" style="margin-top:8px">
+                    <button id="copy">Copiază</button><button id="dl">Descarcă .txt</button><button id="clr">Șterge tot</button>
+                </div>
+            </section>
+
+            <section>
+                <h2>Liste de slujbe și persoane</h2>
+                <p class="s" id="fstat">Se citesc slujbe.txt și persoana.txt…</p>
+                <p class="s">Elementele din fișiere sunt fixe. Cele adăugate aici se salvează local și se pot șterge.</p>
+                <div class="two" style="margin-top:8px">
+                    <div><div class="row"><input type="text" id="nact" placeholder="Slujbă nouă"><button data-add="acts">Adaugă</button></div><ul id="lacts"></ul></div>
+                    <div><div class="row"><input type="text" id="nper" placeholder="Persoană nouă"><button data-add="persons">Adaugă</button></div><ul id="lpersons"></ul></div>
+                </div>
+            </section>
+
+            <section>
+                <h2>Slujbe cu persoană implicită</h2>
+                <p class="s">Slujbele din slujbe-slujitor.txt sunt mereu în listă. Dacă o slujbă de aici este aleasă și câmpul Persoană e gol, se folosește persoana implicită de mai jos (sau cea scrisă pe linie după „|”).</p>
+                <div class="row" style="margin-top:8px">
+                    <input type="text" id="slujitor" list="persons" placeholder="Persoana implicită (slujitor)" autocomplete="off" aria-label="Persoana implicită">
+                </div>
+                <ul id="lgroups"></ul>
+            </section>
+        </div>
+
+        <aside class="notes">
+            <section style="flex:1;display:flex;flex-direction:column;min-height:0">
+                <h2>Notițe rapide</h2>
+                <p class="s" id="nhint">Nu se salvează între sesiuni.</p>
+                <input type="password" id="key" placeholder="Parola echipei" autocomplete="off" aria-label="Parola echipei" style="margin:6px 0;width:100%;background:var(--field);border:1px solid var(--line);border-radius:4px;padding:6px 8px">
+                <p class="s" id="sync" aria-live="polite"></p>
+                <textarea id="notes" aria-label="Notițe rapide"></textarea>
+            </section>
+            <section id="chatsec" style="flex:1;display:flex;flex-direction:column;min-height:0">
+                <h2>Chat echipă</h2>
+                <div id="team" class="team" aria-label="Conversații" aria-live="polite"><div class="s" id="tempty" style="padding:4px">Introdu parola echipei pentru chat.</div></div>
+                <p class="s" id="tstat" aria-live="polite" style="margin-top:6px"></p>
+                <div class="row" style="margin-top:6px">
+                    <input type="text" id="btxt" maxlength="300" placeholder="Banner pentru toți vizualizatorii" aria-label="Text banner">
+                    <button id="bsend">Trimite banner</button><button id="bclr">Retrage</button>
+                </div>
+                <div class="row" style="margin-top:6px"><button id="tclr">Șterge tot chatul</button></div>
+            </section>
+        </aside>
     </div>
-    <div class="vid" id="vid"></div>
-    <div class="clock">
-      <b id="clock">--:--</b>
-      <span class="src" id="src">Fără sursă de timp</span>
-    </div>
-    <details style="margin-top:8px"><summary class="s" style="cursor:pointer">Ceas manual (dacă timpul din player nu este disponibil)</summary>
-      <div class="row" style="margin-top:8px">
-        <input type="text" id="mstart" value="0:00" aria-label="Timp de start manual">
-        <button id="mgo">Pornește ceas manual</button><button id="mstop">Oprește</button>
-      </div>
-    </details>
 
-    <div class="rec">
-      <div><label for="act">Act</label><input type="text" id="act" list="acts" autocomplete="off"></div>
-      <div><label for="person">Persoană</label><input type="text" id="person" list="persons" autocomplete="off"></div>
-    </div>
-    <datalist id="acts"></datalist><datalist id="persons"></datalist>
-    <div class="btns">
-      <button id="rec">inregistreaza</button>
-      <button id="recA" class="alt">inregistreaza(aprox)</button>
-    </div>
-    <div class="msg" id="msg" aria-live="polite"></div>
-  </section>
-
-  <section>
-    <h2>Capitole</h2>
-    <div class="chs"><div class="in" id="list"></div></div>
-    <textarea id="out" readonly aria-label="Text capitole"></textarea>
-    <div class="row" style="margin-top:8px">
-      <button id="copy">Copiază</button><button id="dl">Descarcă .txt</button><button id="clr">Șterge tot</button>
-    </div>
-  </section>
-
-  <section>
-    <h2>Liste salvate local</h2>
-    <div class="two">
-      <div><div class="row"><input type="text" id="nact" placeholder="Act nou"><button data-add="acts">Adaugă</button></div><ul id="lacts"></ul></div>
-      <div><div class="row"><input type="text" id="nper" placeholder="Persoană nouă"><button data-add="persons">Adaugă</button></div><ul id="lpersons"></ul></div>
-    </div>
-  </section>
-
-  <section>
-    <h2>Persoană automată pentru anumite acte</h2>
-    <p class="s">Dacă actul ales are o regulă și câmpul Persoană este gol, persoana se completează de aici.</p>
-    <div class="row" style="margin-top:8px">
-      <input type="text" id="gact" list="acts" placeholder="Act" autocomplete="off">
-      <input type="text" id="gper" list="persons" placeholder="Persoană" autocomplete="off">
-      <button id="gadd">Adaugă regulă</button>
-    </div>
-    <ul id="lgroups"></ul>
-  </section>
-</div>
-
-<aside class="notes">
-  <section style="flex:1;display:flex;flex-direction:column;min-height:0">
-    <h2>Notițe rapide</h2>
-    <p class="s" id="nhint">Nu se salvează între sesiuni.</p>
-    <input type="password" id="key" placeholder="Parola echipei" autocomplete="off" aria-label="Parola echipei" style="margin:6px 0;width:100%;background:var(--field);border:1px solid var(--line);border-radius:4px;padding:6px 8px">
-    <p class="s" id="sync" aria-live="polite"></p>
-    <textarea id="notes" aria-label="Notițe rapide"></textarea>
-  </section>
-  <section style="flex:1;display:flex;flex-direction:column;min-height:0">
-    <h2>Chat echipă</h2>
-    <div id="team" class="team" aria-label="Conversații" aria-live="polite"><div class="s" id="tempty" style="padding:4px">Introdu parola echipei pentru chat.</div></div>
-    <p class="s" id="tstat" aria-live="polite" style="margin-top:6px"></p>
-    <div class="row" style="margin-top:6px">
-      <input type="text" id="btxt" maxlength="300" placeholder="Banner pentru toți vizualizatorii" aria-label="Text banner">
-      <button id="bsend">Trimite banner</button><button id="bclr">Retrage</button>
-    </div>
-    <div class="row" style="margin-top:6px"><button id="tclr">Șterge tot chatul</button></div>
-  </section>
-</aside>
-</div>
-
-<script src="config.js"></script>
-<script>
-const $=id=>document.getElementById(id);
-const store={
-  get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},
-  set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
-};
-let acts=store.get('cl_acts',[]), persons=store.get('cl_persons',[]), groups=store.get('cl_groups',{}), chapters=store.get('cl_chapters',[]);
-const collator=new Intl.Collator('ro',{sensitivity:'base'});
-const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
-const norm=s=>s.trim().replace(/\s+/g,' ');
-const lower=s=>s.toLowerCase();
-
-/* ---------- time ---------- */
-let playerT=null, playerSeen=0, manual=null; // manual={base,at}
-function fmt(t){t=Math.max(0,Math.floor(t));const h=Math.floor(t/3600),m=Math.floor(t%3600/60),s=t%60;
-  const p=n=>String(n).padStart(2,'0');return h?`${h}:${p(m)}:${p(s)}`:`${m}:${p(s)}`}
-function parseT(s){const p=s.trim().split(':').map(Number);if(!p.length||p.some(n=>isNaN(n)||n<0))return null;
-  return p.reduce((a,n)=>a*60+n,0)}
-function now(){
-  if(playerT!==null&&Date.now()-playerSeen<3000)return playerT;
-  if(manual)return manual.base+(Date.now()-manual.at)/1000;
-  return null;
-}
-setInterval(()=>{
-  const t=now(),live=playerT!==null&&Date.now()-playerSeen<3000;
-  $('clock').textContent=t===null?'--:--':fmt(t);
-  $('src').textContent=t===null?'Fără sursă de timp':live?'Timp din player YouTube':'Ceas manual';
-  $('src').className='src'+(t!==null?' ok':'');
-},250);
-window.addEventListener('message',e=>{
-  if(e.origin!=='https://www.youtube.com')return;
-  let d=e.data;try{if(typeof d==='string')d=JSON.parse(d)}catch(x){return}
-  if(d&&d.event==='infoDelivery'&&d.info&&typeof d.info.currentTime==='number'){playerT=d.info.currentTime;playerSeen=Date.now()}
-  if(d&&d.event==='initialDelivery'&&d.info&&typeof d.info.currentTime==='number'){playerT=d.info.currentTime;playerSeen=Date.now()}
-});
-$('mgo').onclick=()=>{const b=parseT($('mstart').value);if(b===null){say('Timp de start invalid.');return}manual={base:b,at:Date.now()}};
-$('mstop').onclick=()=>{manual=null};
-
-/* ---------- player ---------- */
-function vidId(s){s=s.trim();if(/^[\w-]{11}$/.test(s))return s;
-  const m=s.match(/(?:v=|youtu\.be\/|\/live\/|\/embed\/|\/shorts\/)([\w-]{11})/);return m?m[1]:null}
-let beat=null,mode='channel',lastLoad=0;
-function mount(path){
-  lastLoad=Date.now();
-  const f=document.createElement('iframe');
-  f.allow='autoplay; encrypted-media; picture-in-picture; fullscreen';f.allowFullscreen=true;
-  f.src=`https://www.youtube.com/embed/${path}enablejsapi=1&mute=1&autoplay=1&playsinline=1&origin=${encodeURIComponent(location.origin)}`;
-  $('vid').innerHTML='';$('vid').appendChild(f);playerT=null;playerSeen=0;
-  clearInterval(beat);
-  const listen=()=>{try{f.contentWindow.postMessage(JSON.stringify({event:'listening',id:1,channel:'widget'}),'*');
-    f.contentWindow.postMessage(JSON.stringify({event:'command',func:'addEventListener',args:['onStateChange'],id:1,channel:'widget'}),'*')}catch(e){}};
-  f.onload=listen;beat=setInterval(()=>{if(Date.now()-playerSeen>3000)listen()},1500);
-}
-function chanId(){const c=((window.CFG&&CFG.channelId)||store.get('cl_chan','')||'').trim();return /^UC[\w-]{22}$/.test(c)?c:''}
-function loadChannel(){
-  const c=chanId();
-  if(!c){say('Lipsește ID-ul canalului: setează channelId în config.js sau lipește-l (UC…) în câmpul de link.');return false}
-  mode='channel';mount('live_stream?channel='+c+'&');return true;
-}
-$('load').onclick=()=>{
-  const v=$('url').value.trim(),ch=v.match(/UC[\w-]{22}/);
-  if(!v){loadChannel();return}
-  if(ch){store.set('cl_chan',ch[0]);loadChannel();return}
-  const id=vidId(v);if(!id){say('Link YouTube invalid.');return}
-  mode='video';mount(id+'?');
-};
-// dacă transmisiunea canalului nu a pornit încă, reîncearcă din minut în minut
-setInterval(()=>{if(mode==='channel'&&Date.now()-playerSeen>60000&&Date.now()-lastLoad>60000)loadChannel()},15000);
-$('url').addEventListener('keydown',e=>{if(e.key==='Enter')$('load').click()});
-
-/* ---------- lists ---------- */
-function addTo(arr,key,v){v=norm(v);if(!v)return;if(!arr.some(x=>lower(x)===lower(v))){arr.push(v);arr.sort(collator.compare);store.set(key,arr)}}
-function renderLists(){
-  acts.sort(collator.compare);persons.sort(collator.compare);
-  $('acts').innerHTML=acts.map(a=>`<option value="${esc(a)}">`).join('');
-  $('persons').innerHTML=persons.map(a=>`<option value="${esc(a)}">`).join('');
-  const li=(arr,k)=>arr.map((v,i)=>`<li><span>${esc(v)}</span><button data-rm="${k}" data-i="${i}" aria-label="Șterge ${esc(v)}">×</button></li>`).join('')||'<li class="s">Goală</li>';
-  $('lacts').innerHTML=li(acts,'acts');$('lpersons').innerHTML=li(persons,'persons');
-  const g=Object.keys(groups).sort(collator.compare);
-  $('lgroups').innerHTML=g.map(k=>`<li><span>${esc(k)} → ${esc(groups[k])}</span><button data-rmg="${esc(k)}" aria-label="Șterge regula">×</button></li>`).join('')||'<li class="s">Nicio regulă</li>';
-}
-document.addEventListener('click',e=>{
-  const t=e.target;
-  if(t.dataset.add){const inp=t.dataset.add==='acts'?$('nact'):$('nper');
-    t.dataset.add==='acts'?addTo(acts,'cl_acts',inp.value):addTo(persons,'cl_persons',inp.value);inp.value='';renderLists()}
-  if(t.dataset.rm){(t.dataset.rm==='acts'?acts:persons).splice(+t.dataset.i,1);store.set(t.dataset.rm==='acts'?'cl_acts':'cl_persons',t.dataset.rm==='acts'?acts:persons);renderLists()}
-  if(t.dataset.rmg){delete groups[t.dataset.rmg];store.set('cl_groups',groups);renderLists()}
-});
-$('gadd').onclick=()=>{const a=norm($('gact').value),p=norm($('gper').value);if(!a||!p){say('Completează actul și persoana pentru regulă.');return}
-  const ex=Object.keys(groups).find(k=>lower(k)===lower(a));if(ex)delete groups[ex];
-  groups[a]=p;store.set('cl_groups',groups);addTo(acts,'cl_acts',a);addTo(persons,'cl_persons',p);
-  $('gact').value=$('gper').value='';renderLists()};
-
-/* ---------- chapters ---------- */
-function line(c){return `${fmt(c.t)}${c.approx?' (aprox)':''}${c.act?' - '+c.act:''}${c.person?' - '+c.person:''}${c.details?' '+c.details:''}`}
-function renderOut(){$('out').value=chapters.map(line).join('\n');store.set('cl_chapters',chapters)}
-function renderChapters(){
-  chapters.sort((a,b)=>a.t-b.t);
-  $('list').innerHTML=chapters.length?`<div class="ch hd"><span>Timp</span><span title="aprox">~</span><span>Act</span><span>Persoană</span><span>Detalii</span><span></span></div>`+
-  chapters.map((c,i)=>`<div class="ch" data-i="${i}"><input type="text" data-f="t" value="${fmt(c.t)}" aria-label="Timp"><input type="checkbox" data-f="approx" ${c.approx?'checked':''} aria-label="Aproximativ">
-  <input type="text" data-f="act" value="${esc(c.act)}" aria-label="Act"><input type="text" data-f="person" value="${esc(c.person)}" aria-label="Persoană">
-  <input type="text" data-f="details" value="${esc(c.details)}" placeholder="detalii" aria-label="Detalii"><button class="del" data-del="${i}" aria-label="Șterge capitol">×</button></div>`).join('')
-  :'<p class="s">Niciun capitol încă. Apasă inregistreaza în timpul transmisiunii.</p>';
-  renderOut();
-}
-$('list').addEventListener('input',e=>{const f=e.target.dataset.f;if(!f||f==='t')return;
-  const c=chapters[+e.target.closest('.ch').dataset.i];c[f]=f==='approx'?e.target.checked:e.target.value;renderOut()});
-$('list').addEventListener('change',e=>{const f=e.target.dataset.f;if(f!=='t')return;
-  const c=chapters[+e.target.closest('.ch').dataset.i],v=parseT(e.target.value);if(v!==null)c.t=v;renderChapters()});
-$('list').addEventListener('click',e=>{if(e.target.dataset.del!==undefined){chapters.splice(+e.target.dataset.del,1);renderChapters()}});
-
-let mt;function say(m){$('msg').textContent=m;clearTimeout(mt);mt=setTimeout(()=>$('msg').textContent='',4000)}
-function record(approx){
-  const t=now();
-  if(t===null){say('Nu există timp: încarcă videoclipul și pornește-l, sau pornește ceasul manual.');return}
-  const act=norm($('act').value);
-  if(!act){say('Introdu un act.');return}
-  let person=norm($('person').value);
-  if(!person){const k=Object.keys(groups).find(k=>lower(k)===lower(act));if(k)person=groups[k]}
-  addTo(acts,'cl_acts',act);if(person)addTo(persons,'cl_persons',person);renderLists();
-  chapters.push({t:Math.floor(t),approx,act,person,details:''});renderChapters();
-  say(`Înregistrat ${fmt(t)}${approx?' (aprox)':''} - ${act}${person?' - '+person:''}`);
-  $('act').value='';$('person').value='';$('act').focus();
-}
-$('rec').onclick=()=>record(false);$('recA').onclick=()=>record(true);
-['act','person'].forEach(id=>$(id).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();record(e.shiftKey)}}));
-
-$('copy').onclick=async()=>{try{await navigator.clipboard.writeText($('out').value);say('Copiat.')}catch(e){$('out').select();document.execCommand('copy');say('Copiat.')}};
-$('dl').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([$('out').value+'\n'],{type:'text/plain'}));a.download='capitole.txt';a.click()};
-$('clr').onclick=()=>{if(chapters.length&&confirm('Ștergi toate capitolele?')){chapters=[];renderChapters()}};
-
-renderLists();renderChapters();
-loadChannel(); // ultimul pas: say() și restul variabilelor există deja
-
-/* ---------- Firebase: notițe live + chat echipă ---------- */
-const DB=((window.CFG&&CFG.dbUrl)||'').replace(/\/+$/,'');
-const PWOK=/^[A-Za-z0-9_-]{8,}$/;
-const ses={get(k){try{return sessionStorage.getItem(k)||''}catch(e){return ''}},set(k,v){try{sessionStorage.setItem(k,v)}catch(e){}}};
-const pw=()=>$('key').value.trim();
-const tst=m=>{$('tstat').textContent=m};
-const rid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-let writing=false,dirty=false,saveT=null,authed=false,bannerState=null,connId=0;
-async function fbReq(method,path,body){
-  const r=await fetch(DB+path+'.json',{method,body:body?JSON.stringify(body):undefined});
-  if(!r.ok)throw new Error(r.status+' '+(await r.text()).slice(0,100));
-}
-// aplică evenimentele put/patch din Firebase pe un obiect local
-function applyEv(root,path,data,merge){
-  const seg=path.split('/').filter(Boolean);
-  if(!seg.length){
-    if(merge){for(const k in data){if(data[k]===null)delete root[k];else root[k]=data[k]}}
-    else{for(const k in root)delete root[k];if(data&&typeof data==='object')Object.assign(root,data)}
-    return}
-  let o=root;
-  for(let i=0;i<seg.length-1;i++){if(!o[seg[i]]||typeof o[seg[i]]!=='object')o[seg[i]]={};o=o[seg[i]]}
-  const last=seg[seg.length-1];
-  if(merge&&data&&typeof data==='object'){
-    if(!o[last]||typeof o[last]!=='object')o[last]={};
-    for(const k in data){if(data[k]===null)delete o[last][k];else o[last][k]=data[k]}
-  }else if(data===null)delete o[last];else o[last]=data;
-}
-
-/* notițe */
-async function push(){
-  if(!authed)return;
-  if(writing){dirty=true;return}
-  writing=true;
-  try{
-    const pub={text:$('notes').value,at:Date.now()};if(bannerState)pub.banner=bannerState;
-    const r=await fetch(DB+'/notes/live.json',{method:'PUT',body:JSON.stringify({pub,k:pw()})});
-    $('sync').textContent=r.ok?'Notițe partajate live':(r.status===401||r.status===403?'Parolă greșită.':'Eroare la partajare ('+r.status+').');
-  }catch(e){$('sync').textContent='Fără conexiune. Se reîncearcă la următoarea modificare.'}
-  writing=false;if(dirty){dirty=false;push()}
-}
-$('notes').addEventListener('input',()=>{clearTimeout(saveT);saveT=setTimeout(push,400)});
-$('bsend').onclick=()=>{
-  const m=$('btxt').value.trim();
-  if(!authed){tst('Introdu parola echipei.');return}
-  if(!m){tst('Scrie textul bannerului.');return}
-  bannerState={m:m.slice(0,300),id:rid(),at:Date.now()};$('btxt').value='';push();tst('Banner trimis tuturor.');
-};
-$('bclr').onclick=()=>{if(!authed)return;bannerState=null;push();tst('Banner retras.')};
-
-/* chat: o conversație per vizualizator (chat/<parola>/<id sesiune>) */
-let chatES=null,chat={},threads=new Map(),chatReady=false;
-const box=$('team');
-function stopChat(){if(chatES){chatES.close();chatES=null}chatReady=false}
-function clearThreads(){for(const t of threads.values())t.el.remove();threads.clear();chat={}}
-function lock(msg){authed=false;stopChat();clearThreads();$('tempty').textContent='Introdu parola echipei pentru chat.';$('sync').textContent=msg||''}
-async function chatSend(cid,m){
-  const body={};body['msgs/'+rid()]={f:'m',m:m.slice(0,500),at:Date.now()};
-  await fbReq('PATCH','/chat/'+pw()+'/'+encodeURIComponent(cid),body);
-}
-function mkThread(cid){
-  const el=document.createElement('div');el.className='th';
-  const hd=document.createElement('div');hd.className='thh';
-  const nm=document.createElement('strong');
-  const del=document.createElement('button');del.className='del';del.textContent='×';del.setAttribute('aria-label','Șterge conversația');
-  hd.append(nm,del);
-  const cv=document.createElement('div');cv.className='cv';cv.setAttribute('role','log');
-  const row=document.createElement('div');row.className='row';
-  const inp=document.createElement('input');inp.type='text';inp.maxLength=500;inp.placeholder='Răspuns';inp.setAttribute('aria-label','Răspuns');
-  const b=document.createElement('button');b.textContent='Trimite';
-  row.append(inp,b);el.append(hd,cv,row);
-  const go=async()=>{const m=inp.value.trim();if(!m)return;inp.value='';
-    try{await chatSend(cid,m);tst('')}catch(e){inp.value=m;tst('Eroare la trimitere: '+e.message)}};
-  b.onclick=go;inp.addEventListener('keydown',e=>{if(e.key==='Enter')go()});
-  el.addEventListener('focusin',()=>el.classList.remove('new'));
-  del.onclick=async()=>{if(confirm('Ștergi conversația cu '+nm.textContent+'?'))
-    try{await fbReq('DELETE','/chat/'+pw()+'/'+encodeURIComponent(cid))}catch(e){tst('Eroare: '+e.message)}};
-  return {el,nm,cv,ids:new Set()};
-}
-const nickOf=c=>(chat[c].meta&&chat[c].meta.n)||'Anonim';
-const lastAt=c=>Math.max(0,...Object.values(chat[c].msgs||{}).map(x=>(x&&x.at)||0));
-function renderChat(){
-  const cids=Object.keys(chat).filter(c=>chat[c]&&typeof chat[c]==='object');
-  for(const [c,t] of threads)if(!cids.includes(c)){t.el.remove();threads.delete(c)}
-  const groups={};
-  for(const c of cids){(groups[nickOf(c).toLowerCase()]=groups[nickOf(c).toLowerCase()]||[]).push(c)}
-  for(const g of Object.values(groups))g.sort((a,b)=>((chat[a].meta&&chat[a].meta.at)||0)-((chat[b].meta&&chat[b].meta.at)||0));
-  for(const c of cids.slice().sort((a,b)=>lastAt(a)-lastAt(b))){
-    let t=threads.get(c);
-    if(!t){t=mkThread(c);threads.set(c,t);box.insertBefore(t.el,box.firstChild)}
-    const g=groups[nickOf(c).toLowerCase()];
-    t.nm.textContent=nickOf(c)+(g.length>1?' ('+(g.indexOf(c)+1)+')':'');
-    const list=Object.entries(chat[c].msgs||{}).filter(([,x])=>x&&typeof x.m==='string').sort((a,b)=>(a[1].at||0)-(b[1].at||0));
-    const nb=t.cv.scrollHeight-t.cv.scrollTop-t.cv.clientHeight<40||!t.ids.size;
-    for(const [id,x] of list){
-      if(t.ids.has(id))continue;t.ids.add(id);
-      const d=document.createElement('div');d.className='bub '+(x.f==='m'?'m':'v');d.textContent=x.m;t.cv.appendChild(d);
-      if(x.f!=='m'&&chatReady&&!t.el.contains(document.activeElement))t.el.classList.add('new');
-    }
-    if(nb)t.cv.scrollTop=t.cv.scrollHeight;
-  }
-  $('tempty').textContent=cids.length?'':'Nicio conversație încă.';
-}
-function startChat(){
-  stopChat();clearThreads();
-  chatES=new EventSource(DB+'/chat/'+pw()+'.json');
-  ['put','patch'].forEach(ev=>chatES.addEventListener(ev,e=>{
-    try{const m=JSON.parse(e.data);applyEv(chat,m.path,m.data,ev==='patch');renderChat();chatReady=true}catch(x){}}));
-  chatES.onerror=()=>tst('Conexiune chat întreruptă, se reconectează…');
-  chatES.onopen=()=>tst('');
-}
-$('tclr').onclick=async()=>{if(authed&&confirm('Ștergi toate conversațiile?'))
-  try{await fbReq('DELETE','/chat/'+pw())}catch(e){tst('Eroare: '+e.message)}};
-
-/* conectare cu parola echipei */
-async function connect(){
-  const id=++connId,k=pw();
-  if(!DB){$('sync').textContent='Lipsește dbUrl în config.js.';return}
-  if(!PWOK.test(k)){lock('Introdu parola echipei (minim 8 caractere: litere, cifre, - sau _).');return}
-  try{
-    const r=await fetch(DB+'/chat/'+k+'.json?shallow=true');
-    if(id!==connId)return;
-    if(r.status===401||r.status===403){lock('Parolă greșită.');return}
-    if(!r.ok)throw new Error(r.status);
-  }catch(e){lock('Fără conexiune la Firebase.');return}
-  ses.set('cl_pw',k);authed=true;
-  try{const b=await (await fetch(DB+'/notes/live/pub/banner.json')).json();if(id===connId)bannerState=b&&b.m?b:null}catch(e){}
-  if(id!==connId)return;
-  push();startChat();
-}
-$('key').value=ses.get('cl_pw');
-$('key').addEventListener('change',connect);
-connect();
-</script>
+    <script src="config.js"></script>
+    <script src="index.js"></script>
 </body>
 </html>

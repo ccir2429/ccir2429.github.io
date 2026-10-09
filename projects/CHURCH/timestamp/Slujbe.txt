@@ -1,0 +1,17 @@
+# O slujbă pe linie. Liniile goale și cele care încep cu # sunt ignorate.
+Anunțuri slujbe
+Anunțuri și încheiere
+Cântare
+Cântare în comun
+Mărturie
+Poezie
+Predică
+Rugăciune în comun
+Rugăciune individuală
+Rugăciune de mulțumire
+Rugăciune de binecuvântare
+Cina Domnului
+Îndemn la rugăciune
+Scurt mesaj
+Citire cuvânt
+Citire cauze
