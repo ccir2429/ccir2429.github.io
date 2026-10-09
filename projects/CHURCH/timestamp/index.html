@@ -53,7 +53,7 @@
 
             <section>
                 <h2>Liste de slujbe și persoane</h2>
-                <p class="s" id="fstat">Se citesc slujbe.txt și persoana.txt…</p>
+                <p class="s" id="fstat">Se citesc Slujbe.txt și Persoane.txt…</p>
                 <p class="s">Elementele din fișiere sunt fixe. Cele adăugate aici se salvează local și se pot șterge.</p>
                 <div class="two" style="margin-top:8px">
                     <div><div class="row"><input type="text" id="nact" placeholder="Slujbă nouă"><button data-add="acts">Adaugă</button></div><ul id="lacts"></ul></div>
@@ -63,7 +63,7 @@
 
             <section>
                 <h2>Slujbe cu persoană implicită</h2>
-                <p class="s">Slujbele din slujbe-slujitor.txt sunt mereu în listă. Dacă o slujbă de aici este aleasă și câmpul Persoană e gol, se folosește persoana implicită de mai jos (sau cea scrisă pe linie după „|”).</p>
+                <p class="s">Slujbele din Slujbe_slujitor.txt sunt mereu în listă. Dacă o slujbă de aici este aleasă și câmpul Persoană e gol, se folosește persoana implicită de mai jos (sau cea scrisă pe linie după „|”).</p>
                 <div class="row" style="margin-top:8px">
                     <input type="text" id="slujitor" list="persons" placeholder="Persoana implicită (slujitor)" autocomplete="off" aria-label="Persoana implicită">
                 </div>
@@ -74,22 +74,37 @@
         <aside class="notes">
             <section style="flex:1;display:flex;flex-direction:column;min-height:0">
                 <h2>Notițe rapide</h2>
-                <p class="s" id="nhint">Nu se salvează între sesiuni.</p>
-                <input type="password" id="key" placeholder="Parola echipei" autocomplete="off" aria-label="Parola echipei" style="margin:6px 0;width:100%;background:var(--field);border:1px solid var(--line);border-radius:4px;padding:6px 8px">
-                <p class="s" id="sync" aria-live="polite"></p>
+                <p class="s" id="nhint">Notițele nu se salvează între sesiuni.</p>
+                <div class="row" style="margin:6px 0">
+                    <button id="share">Partajează notițe</button>
+                    <span class="s" id="sync" aria-live="polite"></span>
+                </div>
                 <textarea id="notes" aria-label="Notițe rapide"></textarea>
             </section>
-            <section id="chatsec" style="flex:1;display:flex;flex-direction:column;min-height:0">
-                <h2>Chat echipă</h2>
-                <div id="team" class="team" aria-label="Conversații" aria-live="polite"><div class="s" id="tempty" style="padding:4px">Introdu parola echipei pentru chat.</div></div>
-                <p class="s" id="tstat" aria-live="polite" style="margin-top:6px"></p>
-                <div class="row" style="margin-top:6px">
-                    <input type="text" id="btxt" maxlength="300" placeholder="Banner pentru toți vizualizatorii" aria-label="Text banner">
-                    <button id="bsend">Trimite banner</button><button id="bclr">Retrage</button>
+            <section id="alertsec">
+                <h2>Alertă pentru toți vizualizatorii</h2>
+                <div class="row">
+                    <input type="text" id="btxt" maxlength="300" placeholder="Text alertă" aria-label="Text alertă">
+                    <button id="bsend">Trimite alertă</button><button id="bclr">Retrage</button>
                 </div>
-                <div class="row" style="margin-top:6px"><button id="tclr">Șterge tot chatul</button></div>
+                <p class="s" id="astat" aria-live="polite" style="margin-top:6px"></p>
+            </section>
+            <section id="chatsec" style="flex:1;display:flex;flex-direction:column;min-height:0">
+                <div class="thh"><h2>Chat echipă</h2><button id="addchat" aria-label="Adaugă chat">+ Adaugă chat</button></div>
+                <div id="team" class="team" aria-label="Conversații" aria-live="polite"><div class="s" id="tempty" style="padding:4px">Niciun chat. Apasă „+ Adaugă chat”.</div></div>
+                <p class="s" id="tstat" aria-live="polite" style="margin-top:6px"></p>
             </section>
         </aside>
+    </div>
+
+    <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="mtitle" hidden>
+        <div class="mbox">
+            <h2 id="mtitle"></h2>
+            <p class="s" id="mdesc"></p>
+            <input id="minp" type="password" autocomplete="off" aria-label="Valoare">
+            <p class="s" id="merr" style="color:var(--rec);min-height:1.2em" aria-live="polite"></p>
+            <div class="row"><button id="mok">OK</button><button id="mcancel">Anulează</button></div>
+        </div>
     </div>
 
     <script src="config.js"></script>

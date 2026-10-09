@@ -16,22 +16,19 @@
         <section id="chat">
             <h2>Chat cu echipa</h2>
             <div id="lock">
-                <p>Notițele se văd fără parolă. Pentru a scrie în chat, introdu parola echipei.</p>
+                <p>Introdu o poreclă și parola echipei pentru a scrie în chat.</p>
                 <div class="row">
+                    <input type="text" id="nick" maxlength="40" placeholder="Poreclă" autocomplete="off" aria-label="Poreclă">
                     <input type="password" id="pw" placeholder="Parola echipei" autocomplete="off" aria-label="Parola echipei">
                     <button id="enter">Intră în chat</button>
                 </div>
             </div>
             <div id="room" hidden>
-                <div id="cv" role="log" aria-live="polite" aria-label="Conversația ta cu echipa"></div>
+                <div id="cv" role="log" aria-live="polite" aria-label="Conversația cu echipa"></div>
                 <div class="row">
                     <input type="text" id="msg" maxlength="500" placeholder="Scrie un mesaj pentru echipă" aria-label="Mesaj">
                     <button id="send">Trimite</button>
                 </div>
-                <details id="set" style="margin-top:8px">
-                    <summary>Poreclă</summary>
-                    <div class="row"><input type="text" id="nick" maxlength="40" placeholder="Poreclă (opțional)" aria-label="Poreclă"></div>
-                </details>
             </div>
             <p id="ss" aria-live="polite" style="margin-top:6px"></p>
         </section>
