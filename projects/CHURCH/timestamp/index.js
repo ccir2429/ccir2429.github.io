@@ -199,7 +199,7 @@ const ses = { get(k) { try { return sessionStorage.getItem(k) || '' } catch (e) 
 const pw = () => $('key').value.trim();
 const tst = m => { $('tstat').textContent = m };
 const rid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-const CHAT_ON = !!(window.CFG && CFG.chatEnabled); // chatul este ascuns cât timp chatEnabled e false în config.js
+const CHAT_ON = (window.CFG && CFG.chatEnabled === true); // chatul este ascuns cât timp chatEnabled e false în config.js
 if (!CHAT_ON) $('chatsec').hidden = true;
 let writing = false, dirty = false, saveT = null, authed = false, bannerState = null, connId = 0;
 async function fbReq(method, path, body) {
