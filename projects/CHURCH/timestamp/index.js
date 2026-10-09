@@ -192,80 +192,29 @@ renderLists(); renderChapters();
 loadFiles();
 loadChannel(); // ultimul pas: say() și restul variabilelor există deja
 
-/* ---------- Firebase: autentificare, notițe partajate, alertă, chat ---------- */
+/* ---------- Firebase: notițe partajate + alertă + chat echipă ---------- */
 const CFG0 = window.CFG || {};
 const DB = (CFG0.dbUrl || '').replace(/\/+$/, '');
-const CHAT_ON = !!CFG0.chatEnabled; // chatul (nu și alerta) se ascunde când chatEnabled e false în config.js
+const CHAT_ON = !!CFG0.chatEnabled;
 if (!CHAT_ON) $('chatsec').hidden = true;
-const ses = { get(k) { try { return sessionStorage.getItem(k) || '' } catch (e) { return '' } }, set(k, v) { try { sessionStorage.setItem(k, v) } catch (e) { } } };
-const rid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-const tst = m => { $('tstat').textContent = m };
-const ast = m => { $('astat').textContent = m };
+
 const KEYOK = /^[A-Za-z0-9_-]{6,40}$/;
+const ses = {
+    get(k) { try { return sessionStorage.getItem(k) || '' } catch (e) { return '' } },
+    set(k, v) { try { sessionStorage.setItem(k, v) } catch (e) { }
+    }
+};
+const rid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const key = () => $('key').value.trim();
+const sync = m => { $('sync').textContent = m };
+const tst = m => { $('tstat').textContent = m };
 
-/* fereastră de dialog (parolă / cheie) */
-function ask(o) {
-    return new Promise(resolve => {
-        const m = $('modal'), i = $('minp'), e = $('merr');
-        $('mtitle').textContent = o.title; $('mdesc').textContent = o.desc || '';
-        i.hidden = false; i.type = o.type || 'password'; i.value = ''; e.textContent = '';
-        $('mok').hidden = false; $('mok').textContent = o.ok || 'OK'; $('mcancel').hidden = !o.cancel;
-        m.classList.toggle('solid', !o.cancel); m.hidden = false; i.focus();
-        const done = v => { m.hidden = true; $('mok').onclick = $('mcancel').onclick = null; i.onkeydown = null; resolve(v) };
-        const go = async () => {
-            const v = i.value.trim();
-            if (!v) { e.textContent = 'Introdu o valoare.'; return }
-            $('mok').disabled = true;
-            const err = o.check ? await o.check(v) : '';
-            $('mok').disabled = false;
-            if (err) { e.textContent = err; i.select(); return }
-            done(v);
-        };
-        $('mok').onclick = go; $('mcancel').onclick = () => done(null);
-        i.onkeydown = ev => { if (ev.key === 'Enter') go(); if (ev.key === 'Escape' && o.cancel) done(null) };
-    });
-}
-function fatal(msg) {
-    $('mtitle').textContent = 'Configurare incompletă'; $('mdesc').textContent = msg;
-    $('minp').hidden = true; $('mok').hidden = true; $('mcancel').hidden = true; $('merr').textContent = '';
-    $('modal').classList.add('solid'); $('modal').hidden = false;
-}
-
-/* autentificare Firebase (parola este verificată de Firebase Authentication) */
-const A = { id: '', rt: '', exp: 0 };
-function setTok(id, rt, sec) { A.id = id; A.rt = rt; A.exp = Date.now() + sec * 1000; ses.set('cl_rt', rt) }
-async function signIn(pw) {
-    const r = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=' + encodeURIComponent(CFG0.apiKey), {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: CFG0.adminEmail, password: pw, returnSecureToken: true })
-    });
-    const j = await r.json();
-    if (!r.ok) throw new Error((j.error && j.error.message) || String(r.status));
-    setTok(j.idToken, j.refreshToken, +j.expiresIn);
-}
-async function refresh(rt) {
-    const r = await fetch('https://securetoken.googleapis.com/v1/token?key=' + encodeURIComponent(CFG0.apiKey), {
-        method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'grant_type=refresh_token&refresh_token=' + encodeURIComponent(rt)
-    });
-    const j = await r.json();
-    if (!r.ok) throw new Error((j.error && j.error.message) || String(r.status));
-    setTok(j.id_token, j.refresh_token, +j.expires_in);
-}
-async function dbw(method, path, body) {
-    if (!A.id) throw new Error('neautentificat');
-    if (Date.now() > A.exp - 120000) await refresh(A.rt);
-    const r = await fetch(DB + path + '.json?auth=' + encodeURIComponent(A.id), { method, body: body === undefined ? undefined : JSON.stringify(body) });
-    if (!r.ok) throw new Error(r.status + ' ' + (await r.text()).slice(0, 100));
-    return r.json().catch(() => null);
-}
-// aplică evenimentele put/patch din Firebase pe un obiect local
 function applyEv(root, path, data, merge) {
     const seg = path.split('/').filter(Boolean);
     if (!seg.length) {
         if (merge) { for (const k in data) { if (data[k] === null) delete root[k]; else root[k] = data[k] } }
         else { for (const k in root) delete root[k]; if (data && typeof data === 'object') Object.assign(root, data) }
-        return
+        return;
     }
     let o = root;
     for (let i = 0; i < seg.length - 1; i++) { if (!o[seg[i]] || typeof o[seg[i]] !== 'object') o[seg[i]] = {}; o = o[seg[i]] }
@@ -276,131 +225,137 @@ function applyEv(root, path, data, merge) {
     } else if (data === null) delete o[last]; else o[last] = data;
 }
 
-/* notițe rapide: locale; partajate doar după apăsarea butonului și parola sesiunii */
-let sharing = false, sharedOk = ses.get('cl_shok') === '1', writing = false, dirty = false, saveT = null;
-function setShareUi() {
-    $('share').textContent = sharing ? 'Oprește partajarea' : 'Partajează notițe';
-    $('sync').textContent = sharing ? 'Partajat live cu vizualizatorii' : '';
+async function db(method, path, body) {
+    const r = await fetch(DB + path + '.json', { method, body: body === undefined ? undefined : JSON.stringify(body) });
+    if (!r.ok) throw new Error(r.status + ' ' + (await r.text()).slice(0, 120));
+    return r.json().catch(() => null);
 }
+
+/* notițe rapide (trimise către viewer la /pub/notes) */
+let saveT = null;
 async function pushNotes() {
-    if (!sharing) return;
-    if (writing) { dirty = true; return }
-    writing = true;
-    try { await dbw('PUT', '/pub/notes', { text: $('notes').value, at: Date.now() }); $('sync').textContent = 'Partajat live cu vizualizatorii' }
-    catch (e) { $('sync').textContent = 'Eroare la partajare: ' + e.message }
-    writing = false; if (dirty) { dirty = false; pushNotes() }
+    if (!DB) { sync('Lipsește dbUrl în config.js.'); return }
+    if (!KEYOK.test(key())) { sync('Introdu parola echipei (minim 6 caractere).'); return }
+    try { await db('PUT', '/pub/notes', { text: $('notes').value, at: Date.now() }); sync('Notițe partajate live') }
+    catch (e) { sync('Eroare la partajare: ' + e.message) }
 }
 $('notes').addEventListener('input', () => { clearTimeout(saveT); saveT = setTimeout(pushNotes, 400) });
-$('share').onclick = async () => {
-    if (sharing) { sharing = false; try { await dbw('DELETE', '/pub/notes') } catch (e) { } setShareUi(); return }
-    if (!sharedOk) {
-        const v = await ask({
-            title: 'Parola sesiunii de partajare', desc: 'Introdu parola pentru a partaja notițele cu vizualizatorii. Ți-o cerem o singură dată pe sesiune.',
-            cancel: true, ok: 'Partajează',
-            check: async pw => {
-                try {
-                    const real = await dbw('GET', '/config/sharePw');
-                    if (real === null) return 'Lipsește config/sharePw în Firebase.';
-                    return String(real) === pw ? '' : 'Parolă greșită.';
-                } catch (e) { return 'Eroare: ' + e.message }
-            }
-        });
-        if (!v) return;
-        sharedOk = true; ses.set('cl_shok', '1');
-    }
-    sharing = true; setShareUi(); pushNotes();
-};
+$('key').addEventListener('input', () => { ses.set('cl_team_key', key()); connectChat() });
 
-/* alertă pentru toți vizualizatorii (independentă de chat) */
+/* alertă pentru toți viewerii */
 $('bsend').onclick = async () => {
     const m = $('btxt').value.trim();
-    if (!m) { ast('Scrie textul alertei.'); return }
-    try { await dbw('PUT', '/pub/alert', { m: m.slice(0, 300), id: rid(), at: Date.now() }); $('btxt').value = ''; ast('Alertă trimisă tuturor.') }
-    catch (e) { ast('Eroare: ' + e.message) }
+    if (!m) { tst('Scrie textul bannerului.'); return }
+    if (!DB) { tst('Lipsește dbUrl în config.js.'); return }
+    try { await db('PUT', '/pub/alert', { m: m.slice(0, 300), id: rid(), at: Date.now() }); $('btxt').value = ''; tst('Banner trimis.') }
+    catch (e) { tst('Eroare: ' + e.message) }
 };
-$('bclr').onclick = async () => { try { await dbw('DELETE', '/pub/alert'); ast('Alertă retrasă.') } catch (e) { ast('Eroare: ' + e.message) } };
+$('bclr').onclick = async () => {
+    if (!DB) { tst('Lipsește dbUrl în config.js.'); return }
+    try { await db('DELETE', '/pub/alert'); tst('Banner retras.') }
+    catch (e) { tst('Eroare: ' + e.message) }
+};
 
-/* chat: un card per cheie de acces; vizualizatorul care știe cheia vorbește cu tine */
-const chats = new Map();
-function addChatCard(key) {
-    if (chats.has(key)) return;
-    const el = document.createElement('div'); el.className = 'th';
-    const hd = document.createElement('div'); hd.className = 'thh';
-    const nm = document.createElement('strong');
-    const del = document.createElement('button'); del.className = 'del'; del.textContent = '×'; del.setAttribute('aria-label', 'Șterge chatul');
-    hd.append(nm, del);
-    const cv = document.createElement('div'); cv.className = 'cv'; cv.setAttribute('role', 'log');
-    const row = document.createElement('div'); row.className = 'row';
-    const inp = document.createElement('input'); inp.type = 'text'; inp.maxLength = 500; inp.placeholder = 'Răspuns'; inp.setAttribute('aria-label', 'Răspuns');
-    const b = document.createElement('button'); b.textContent = 'Trimite';
-    row.append(inp, b); el.append(hd, cv, row);
-    const c = { el, nm, cv, ids: new Set(), msgs: {}, ready: false, es: null };
-    chats.set(key, c);
-    $('team').insertBefore(el, $('team').firstChild); $('tempty').hidden = true;
-    const go = async () => {
-        const m = inp.value.trim(); if (!m) return; inp.value = '';
-        try { await dbw('PUT', '/chats/' + key + '/msgs/' + rid(), { f: 'm', n: 'Echipă', c: '', m: m.slice(0, 500), at: Date.now() }); tst('') }
-        catch (e) { inp.value = m; tst('Eroare la trimitere: ' + e.message) }
-    };
-    b.onclick = go; inp.addEventListener('keydown', e => { if (e.key === 'Enter') go() });
-    el.addEventListener('focusin', () => el.classList.remove('new'));
-    del.onclick = async () => {
-        if (!confirm('Ștergi chatul „' + key + '”? Vizualizatorul nu va mai avea acces.')) return;
+/* chat echipă (aceeași structură ca viewer.js: /chats/<key>/msgs) */
+let chatES = null;
+let msgs = {};
+function renderTeam() {
+    const host = $('team');
+    host.innerHTML = '';
+    const log = document.createElement('div');
+    log.className = 'cv';
+    log.id = 'teamlog';
+
+    const list = Object.entries(msgs)
+        .filter(([, x]) => x && typeof x.m === 'string')
+        .sort((a, b) => (a[1].at || 0) - (b[1].at || 0));
+
+    if (!list.length) {
+        const p = document.createElement('div');
+        p.className = 's';
+        p.textContent = 'Niciun mesaj încă pentru această parolă.';
+        log.appendChild(p);
+    } else {
+        for (const [, x] of list) {
+            const d = document.createElement('div');
+            d.className = 'bub' + (x.f === 'm' ? ' m' : '');
+            const who = document.createElement('small');
+            who.textContent = x.f === 'm' ? 'Echipă' : (x.n || 'Vizitator');
+            d.append(who, document.createTextNode(x.m));
+            log.appendChild(d);
+        }
+    }
+
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.style.marginTop = '6px';
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.id = 'teamreply';
+    inp.maxLength = 500;
+    inp.placeholder = 'Răspuns către chat';
+    const btn = document.createElement('button');
+    btn.id = 'teamsend';
+    btn.textContent = 'Trimite';
+    row.append(inp, btn);
+
+    host.append(log, row);
+
+    const send = async () => {
+        const k = key();
+        const m = inp.value.trim();
+        if (!m) { tst('Scrie un mesaj.'); return }
+        if (!KEYOK.test(k)) { tst('Parola echipei nu este validă.'); return }
+        btn.disabled = true;
         try {
-            await dbw('DELETE', '/chatkeys/' + key); await dbw('DELETE', '/chats/' + key);
-            c.es && c.es.close(); el.remove(); chats.delete(key); if (!chats.size) $('tempty').hidden = false;
-        } catch (e) { tst('Eroare: ' + e.message) }
+            const id = rid();
+            await db('PUT', '/chats/' + k + '/msgs/' + id, { f: 'm', n: 'Echipă', m, at: Date.now() });
+            inp.value = '';
+            tst('');
+        } catch (e) { tst('Eroare trimitere: ' + e.message) }
+        btn.disabled = false;
     };
-    const render = () => {
-        const list = Object.entries(c.msgs).filter(([, x]) => x && typeof x.m === 'string').sort((a, b) => (a[1].at || 0) - (b[1].at || 0));
-        const nicks = [...new Set(list.filter(([, x]) => x.f === 'v').map(([, x]) => x.n || 'Anonim'))];
-        nm.textContent = key + ' · ' + (nicks.join(', ') || 'fără mesaje');
-        const nb = cv.scrollHeight - cv.scrollTop - cv.clientHeight < 40 || !c.ids.size;
-        for (const [id, x] of list) {
-            if (c.ids.has(id)) continue; c.ids.add(id);
-            const d = document.createElement('div'), who = document.createElement('small');
-            d.className = 'bub' + (x.f === 'm' ? ' m' : ''); who.textContent = x.f === 'm' ? 'Tu' : (x.n || 'Anonim');
-            d.append(who, document.createTextNode(x.m)); cv.appendChild(d);
-            if (x.f !== 'm' && c.ready && !el.contains(document.activeElement)) el.classList.add('new');
-        }
-        if (nb) cv.scrollTop = cv.scrollHeight;
-        c.ready = true;
-    };
-    render();
-    c.es = new EventSource(DB + '/chats/' + key + '/msgs.json');
-    ['put', 'patch'].forEach(ev => c.es.addEventListener(ev, e => {
-        try { const m = JSON.parse(e.data); applyEv(c.msgs, m.path, m.data, ev === 'patch'); render() } catch (x) { }
-    }));
-    c.es.onerror = () => tst('Conexiune chat întreruptă, se reconectează…');
+
+    btn.onclick = send;
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') send() });
+    log.scrollTop = log.scrollHeight;
 }
-$('addchat').onclick = async () => {
-    const key = await ask({
-        title: 'Adaugă chat', desc: 'Scrie o parolă / cheie de acces pe care o va folosi vizualizatorul pentru a-ți scrie (6–40 caractere: litere, cifre, - sau _).',
-        type: 'text', cancel: true, ok: 'Adaugă',
-        check: async v => {
-            if (!KEYOK.test(v)) return 'Folosește 6–40 caractere: litere, cifre, - sau _.';
-            try { await dbw('PUT', '/chatkeys/' + v, true); return '' } catch (e) { return 'Eroare: ' + e.message }
-        }
-    });
-    if (key) addChatCard(key);
+
+function connectChat() {
+    if (!CHAT_ON) return;
+    const k = key();
+    msgs = {};
+    renderTeam();
+    if (chatES) { chatES.close(); chatES = null; }
+    if (!DB) { tst('Lipsește dbUrl în config.js.'); return; }
+    if (!KEYOK.test(k)) { tst('Introdu parola echipei pentru chat.'); return; }
+
+    chatES = new EventSource(DB + '/chats/' + k + '/msgs.json');
+    ['put', 'patch'].forEach(ev => chatES.addEventListener(ev, e => {
+        try {
+            const m = JSON.parse(e.data);
+            applyEv(msgs, m.path, m.data, ev === 'patch');
+            renderTeam();
+        } catch (x) { }
+    }));
+    chatES.onerror = () => tst('Conexiune chat întreruptă, se reconectează…');
+    chatES.onopen = () => tst('');
+}
+
+$('tclr').onclick = async () => {
+    const k = key();
+    if (!KEYOK.test(k)) { tst('Introdu parola echipei pentru chat.'); return; }
+    if (!confirm('Ștergi tot chatul pentru această parolă?')) return;
+    try {
+        await db('DELETE', '/chats/' + k);
+        msgs = {};
+        renderTeam();
+        tst('Chat șters.');
+    } catch (e) {
+        tst('Eroare: ' + e.message);
+    }
 };
 
-/* pornire: parola de acces este verificată de Firebase Authentication */
-(async function boot() {
-    if (!DB || !CFG0.apiKey || !CFG0.adminEmail) { fatal('Completează dbUrl, apiKey și adminEmail în config.js.'); return }
-    const rt = ses.get('cl_rt');
-    if (rt) { try { await refresh(rt) } catch (e) { ses.set('cl_rt', '') } }
-    if (!A.id) {
-        await ask({
-            title: 'Parola de acces', desc: 'Introdu parola pentru a intra în aplicație.', cancel: false, ok: 'Intră',
-            check: async pw => {
-                try { await signIn(pw); return '' }
-                catch (e) { return /INVALID_PASSWORD|INVALID_LOGIN_CREDENTIALS|EMAIL_NOT_FOUND/.test(e.message) ? 'Parolă greșită.' : 'Eroare: ' + e.message }
-            }
-        });
-    }
-    if (CHAT_ON) {
-        try { const k = await dbw('GET', '/chatkeys'); for (const key in (k || {})) addChatCard(key) }
-        catch (e) { tst('Nu am putut încărca chaturile: ' + e.message) }
-    }
-})();
+if (ses.get('cl_team_key')) $('key').value = ses.get('cl_team_key');
+renderTeam();
+connectChat();

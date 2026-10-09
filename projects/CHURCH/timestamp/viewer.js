@@ -41,6 +41,9 @@ else {
             else { lastAlert = ''; $('banner').hidden = true }
         } catch (x) { }
     }));
+    es.onopen = () => {
+        if (!$('t').value) $('st').textContent = 'Notițele nu sunt partajate momentan.';
+    };
     es.onerror = () => { $('st').textContent = 'Conexiune întreruptă, se reconectează…' };
 }
 $('bx').onclick = () => { $('banner').hidden = true };
@@ -88,8 +91,14 @@ async function send() {
     const id = cid.slice(0, 6) + '-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     $('send').disabled = true;
     try {
-        const r = await fetch(DB + '/chats/' + key + '/msgs/' + id + '.json', { method: 'PUT', body: JSON.stringify({ f: 'v', n, c: cid, m, at: Date.now() }) });
-        if (r.ok) { $('msg').value = ''; say('') }
+        const payload = { f: 'v', n, c: cid, m, at: Date.now() };
+        const r = await fetch(DB + '/chats/' + key + '/msgs/' + id + '.json', { method: 'PUT', body: JSON.stringify(payload) });
+        if (r.ok) {
+            msgs[id] = payload;
+            render();
+            $('msg').value = '';
+            say('');
+        }
         else say('Eroare ' + r.status + ': ' + (await r.text()).slice(0, 120));
     } catch (e) { say('Fără conexiune.') }
     $('send').disabled = false;
