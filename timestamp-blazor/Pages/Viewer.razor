@@ -1,44 +1,306 @@
 @page "/viewer"
+@using System.Net.Http.Json
+@using TimestampBlazor.Services
+@inject HttpClient Http
+@inject ConfigService ConfigService
+@inject LocalStore Store
 @inject IJSRuntime JS
+@implements IAsyncDisposable
 
 <main>
     <h1>Notițe rapide</h1>
-    <p id="st" aria-live="polite">Se conectează…</p>
-    <div id="banner" role="alert" hidden><span id="btxt"></span><button id="bx" aria-label="Închide bannerul">×</button></div>
-    <textarea id="t" readonly aria-label="Notițe rapide, doar citire"></textarea>
+    <p aria-live="polite">@_status</p>
+    @if (_alertText is not null)
+    {
+        <div role="alert">
+            <span>@_alertText</span>
+            <button aria-label="Închide bannerul" @onclick="DismissAlert">×</button>
+        </div>
+    }
+    <textarea readonly aria-label="Notițe rapide, doar citire" value="@_notes"></textarea>
 
     <section id="chat">
         <h2>Chat cu echipa</h2>
-        <div id="lock">
-            <p>Introdu o poreclă și parola echipei pentru a scrie în chat.</p>
-            <div class="row">
-                <input type="text" id="nick" maxlength="40" placeholder="Poreclă" autocomplete="off" aria-label="Poreclă">
-                <input type="password" id="pw" placeholder="Parola echipei" autocomplete="off" aria-label="Parola echipei">
-                <button id="enter">Intră în chat</button>
+        @if (!_chatOn)
+        {
+            // chat is disabled via config.js (chatEnabled=false)
+        }
+        else if (!_inRoom)
+        {
+            <div id="lock">
+                <p>Introdu o poreclă și parola echipei pentru a scrie în chat.</p>
+                <div class="row">
+                    <input type="text" maxlength="40" placeholder="Poreclă" autocomplete="off" aria-label="Poreclă"
+                           value="@_nick" @oninput='e => _nick = e.Value?.ToString() ?? ""' @onkeydown="OnLockKeyDown">
+                    <input type="password" placeholder="Parola echipei" autocomplete="off" aria-label="Parola echipei"
+                           value="@_pw" @oninput='e => _pw = e.Value?.ToString() ?? ""' @onkeydown="OnLockKeyDown">
+                    <button @onclick="EnterAsync">Intră în chat</button>
+                </div>
             </div>
-        </div>
-        <div id="room" hidden>
-            <div id="cv" role="log" aria-live="polite" aria-label="Conversația cu echipa"></div>
-            <div class="row">
-                <input type="text" id="msg" maxlength="500" placeholder="Scrie un mesaj pentru echipă" aria-label="Mesaj">
-                <button id="send">Trimite</button>
+        }
+        else
+        {
+            <div id="room">
+                <div role="log" aria-live="polite" aria-label="Conversația cu echipa">
+                    @if (_messages.Count == 0)
+                    {
+                        <p>Scrie primul mesaj către echipă.</p>
+                    }
+                    else
+                    {
+                        @foreach (var m in _messages)
+                        {
+                            <div class="bub @(m.Mine ? "me" : "")">
+                                <small>@(m.Mine ? "Tu" : (m.From == "m" ? "Echipă" : m.Nick))</small>
+                                @m.Text
+                            </div>
+                        }
+                    }
+                </div>
+                <div class="row">
+                    <input type="text" maxlength="500" placeholder="Scrie un mesaj pentru echipă" aria-label="Mesaj"
+                           value="@_msg" @oninput='e => _msg = e.Value?.ToString() ?? ""' @onkeydown="OnMsgKeyDown">
+                    <button @onclick="SendAsync" disabled="@_sending">Trimite</button>
+                </div>
             </div>
-        </div>
-        <p id="ss" aria-live="polite" style="margin-top:6px"></p>
+        }
+        <p aria-live="polite" style="margin-top:6px">@_chatStatus</p>
     </section>
 </main>
 
 @code {
-    private bool _loaded;
+    private static readonly System.Text.RegularExpressions.Regex KeyOk = new(@"^[A-Za-z0-9_-]{6,40}$");
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    private AppConfig _cfg = new();
+    private string _cid = "";
+    private string _status = "Se conectează…";
+    private string? _notes;
+    private string? _alertText;
+    private string _lastAlertId = "";
+
+    private bool _chatOn;
+    private bool _inRoom;
+    private string _nick = "";
+    private string _pw = "";
+    private string _msg = "";
+    private string _chatStatus = "";
+    private bool _sending;
+    private string _chatKey = "";
+
+    private SseClient? _notesSse;
+    private SseClient? _chatSse;
+    private readonly List<ChatMsg> _messages = new();
+
+    private sealed class ChatMsg
     {
-        // viewer.js manipulates the DOM directly by element id, so it must run only
-        // after Blazor has rendered this markup (see loader.js: loadViewerScripts).
-        if (firstRender && !_loaded)
+        public bool Mine { get; init; }
+        public string From { get; init; } = "";
+        public string Nick { get; init; } = "";
+        public string Text { get; init; } = "";
+        public double At { get; init; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _cfg = await ConfigService.GetAsync();
+        _chatOn = _cfg.ChatEnabled;
+
+        _cid = await Store.GetStringAsync("v_cid", session: true);
+        if (string.IsNullOrEmpty(_cid))
         {
-            _loaded = true;
-            await JS.InvokeVoidAsync("timestampInterop.loadViewerScripts");
+            _cid = Guid.NewGuid().ToString("N")[..12];
+            await Store.SetStringAsync("v_cid", _cid, session: true);
+        }
+
+        _nick = await Store.GetStringAsync("v_nick");
+
+        if (string.IsNullOrEmpty(_cfg.DbUrl))
+        {
+            _status = "Lipsește dbUrl în config.js.";
+        }
+        else
+        {
+            _notesSse = new SseClient(JS);
+            _notesSse.Updated += OnNotesSseUpdated;
+            _notesSse.Opened += OnNotesSseOpened;
+            _notesSse.Errored += OnNotesSseErrored;
+            await _notesSse.StartAsync(_cfg.DbUrl.TrimEnd('/') + "/pub.json");
+        }
+
+        if (_chatOn)
+        {
+            var savedPw = await Store.GetStringAsync("v_pw", session: true);
+            if (!string.IsNullOrEmpty(savedPw) && !string.IsNullOrEmpty(_nick))
+            {
+                _pw = savedPw;
+                await EnterAsync();
+            }
+        }
+    }
+
+    // ---------- shared notes + alert ----------
+    private void OnNotesSseUpdated()
+    {
+        var pub = _notesSse!.Root;
+        var text = pub["notes"]?["text"]?.GetValue<string>();
+        if (text is not null)
+        {
+            _notes = text;
+            _status = "Live: se actualizează automat";
+        }
+        else
+        {
+            _notes = "";
+            _status = "Notițele nu sunt partajate momentan.";
+        }
+
+        var m = pub["alert"]?["m"]?.GetValue<string>();
+        if (m is not null)
+        {
+            var id = pub["alert"]?["id"]?.GetValue<string>() ?? "";
+            if (id != _lastAlertId)
+            {
+                _lastAlertId = id;
+                _alertText = m;
+            }
+        }
+        else
+        {
+            _lastAlertId = "";
+            _alertText = null;
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnNotesSseOpened()
+    {
+        if (string.IsNullOrEmpty(_notes))
+            _status = "Notițele nu sunt partajate momentan.";
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnNotesSseErrored()
+    {
+        _status = "Conexiune întreruptă, se reconectează…";
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void DismissAlert() => _alertText = null;
+
+    // ---------- chat ----------
+    private Task OnLockKeyDown(KeyboardEventArgs e) => e.Key == "Enter" ? EnterAsync() : Task.CompletedTask;
+    private Task OnMsgKeyDown(KeyboardEventArgs e) => e.Key == "Enter" ? SendAsync() : Task.CompletedTask;
+
+    private async Task EnterAsync()
+    {
+        var n = _nick.Trim();
+        var k = _pw.Trim();
+        if (string.IsNullOrEmpty(_cfg.DbUrl)) { _chatStatus = "Lipsește dbUrl în config.js."; return; }
+        if (n.Length == 0) { _chatStatus = "Introdu o poreclă."; return; }
+        if (!KeyOk.IsMatch(k)) { _chatStatus = "Parola nu este validă."; return; }
+
+        try
+        {
+            var resp = await Http.GetAsync(_cfg.DbUrl.TrimEnd('/') + "/chats/" + k + "/msgs.json?shallow=true");
+            if (resp.StatusCode is System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden)
+            {
+                _chatStatus = "Parolă greșită.";
+                return;
+            }
+            if (!resp.IsSuccessStatusCode)
+            {
+                _chatStatus = $"Eroare de conectare ({(int)resp.StatusCode}).";
+                return;
+            }
+        }
+        catch
+        {
+            _chatStatus = "Fără conexiune.";
+            return;
+        }
+
+        _chatKey = k;
+        await Store.SetStringAsync("v_nick", n);
+        await Store.SetStringAsync("v_pw", k, session: true);
+        _chatStatus = "";
+        _inRoom = true;
+
+        if (_chatSse is not null) await _chatSse.DisposeAsync();
+        _messages.Clear();
+        _chatSse = new SseClient(JS);
+        _chatSse.Updated += OnChatSseUpdated;
+        _chatSse.Errored += () => { _chatStatus = "Conexiune chat întreruptă, se reconectează…"; InvokeAsync(StateHasChanged); };
+        _chatSse.Opened += () => { _chatStatus = ""; InvokeAsync(StateHasChanged); };
+        await _chatSse.StartAsync(_cfg.DbUrl.TrimEnd('/') + "/chats/" + k + "/msgs.json");
+    }
+
+    private void OnChatSseUpdated()
+    {
+        var list = _chatSse!.Root
+            .Select(kv => (Id: kv.Key, Node: kv.Value))
+            .Where(x => x.Node is not null && x.Node!["m"] is not null)
+            .OrderBy(x => x.Node!["at"]?.GetValue<double>() ?? 0)
+            .ToList();
+
+        _messages.Clear();
+        foreach (var (_, node) in list)
+        {
+            var f = node!["f"]?.GetValue<string>() ?? "";
+            var c = node["c"]?.GetValue<string>() ?? "";
+            _messages.Add(new ChatMsg
+            {
+                Mine = f == "v" && c == _cid,
+                From = f,
+                Nick = node["n"]?.GetValue<string>() ?? "Anonim",
+                Text = node["m"]?.GetValue<string>() ?? "",
+                At = node["at"]?.GetValue<double>() ?? 0
+            });
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SendAsync()
+    {
+        var m = _msg.Trim();
+        if (m.Length == 0) { _chatStatus = "Scrie un mesaj."; return; }
+        var nick = string.IsNullOrEmpty(_nick) ? "Anonim" : _nick;
+        var id = _cid[..Math.Min(6, _cid.Length)] + "-" + DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString("x") + Guid.NewGuid().ToString("N")[..4];
+        _sending = true;
+        try
+        {
+            var payload = new { f = "v", n = nick, c = _cid, m = m[..Math.Min(500, m.Length)], at = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() };
+            var resp = await Http.PutAsJsonAsync(_cfg.DbUrl.TrimEnd('/') + "/chats/" + _chatKey + "/msgs/" + id + ".json", payload);
+            if (resp.IsSuccessStatusCode)
+            {
+                _msg = "";
+                _chatStatus = "";
+            }
+            else
+            {
+                var body = await resp.Content.ReadAsStringAsync();
+                _chatStatus = $"Eroare {(int)resp.StatusCode}: {body[..Math.Min(120, body.Length)]}";
+            }
+        }
+        catch
+        {
+            _chatStatus = "Fără conexiune.";
+        }
+        _sending = false;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_notesSse is not null)
+        {
+            _notesSse.Updated -= OnNotesSseUpdated;
+            _notesSse.Opened -= OnNotesSseOpened;
+            _notesSse.Errored -= OnNotesSseErrored;
+            await _notesSse.DisposeAsync();
+        }
+        if (_chatSse is not null)
+        {
+            _chatSse.Updated -= OnChatSseUpdated;
+            await _chatSse.DisposeAsync();
         }
     }
 }

@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "TimestampBlazor",
   "resources": {
-    "hash": "sha256-CZKQLX274m8NI/HO4wP4uuQv/bgLLTHnkWbgHptqy90=",
+    "hash": "sha256-GBVI1h0mZGmVJTOEQFQ4jTsNnX3vZ6AH1bJGUpMbLw0=",
     "jsModuleNative": {
       "dotnet.native.js": "sha256-9NoXeVUo4WNrEqrjAp/y3Yc8NmDcymQkzMGOIbIpGio="
     },
@@ -209,10 +209,10 @@
       "mscorlib.wasm": "sha256-OmTGouRNx6WSUuId/voXk3BdmUBjMaPhBmzCV5Ou50U=",
       "netstandard.wasm": "sha256-F85o3B9rvmQY3Fqw2NA9m0s3ClnaV52mai+2TPXGYOQ=",
       "System.Private.CoreLib.wasm": "sha256-IG8eU8RA+sth9u5bXJUd+dGj2XuUViwhA9FS6a3GZOw=",
-      "TimestampBlazor.wasm": "sha256-P1IgGXdejiJE1s83t+d3R8bKvWamQmUbHWm68gwNoWE="
+      "TimestampBlazor.wasm": "sha256-ZtBVvfi6jDv8X5K9FZ9BbfY5Gv+nFmgAaFTBaoDFx3E="
     },
     "pdb": {
-      "TimestampBlazor.pdb": "sha256-v2STPuzWKJ3lV7VWBWQ3kk/0/0H2x8EgT3/YQKa3uhM="
+      "TimestampBlazor.pdb": "sha256-aIuBpCY+6ES98gH8S0XjkXO+N0YCcw61Pp7Ag1F/jL4="
     }
   },
   "cacheBootResources": true,
