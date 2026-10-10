@@ -1,0 +1,863 @@
+@page "/"
+@using System.Globalization
+@using TimestampBlazor.Models
+@using TimestampBlazor.Services
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject ConfigService ConfigService
+@inject LocalStore Store
+@inject BrowserUtilService Browser
+@inject FirebaseService Firebase
+@inject SseClient NotesSse
+@inject YouTubePlayer Player
+@implements IAsyncDisposable
+
+<div class="wrap">
+    <div class="col">
+        <section>
+            <h1>Capitole YouTube Live</h1>
+            <p class="s">Lipește linkul transmisiunii, apoi apasă butonul la fiecare schimbare de slujbă.</p>
+            <div class="row" style="margin-top:10px">
+                <input type="text" @bind="_urlInput" @bind:event="oninput" @onkeydown="OnUrlKeyDown"
+                       placeholder="Gol = live-ul canalului. Sau link / ID video" aria-label="Link YouTube">
+                <button @onclick="OnLoadClick">Încarcă</button>
+            </div>
+            <div class="vid" id="vid"></div>
+            <div class="clock">
+                <b>@(_now is null ? "--:--" : TimeFormat.Format(_now.Value))</b>
+                <span class="src @(_now is not null ? "ok" : "")">@_sourceText</span>
+            </div>
+
+            <div class="rec">
+                <div>
+                    <label for="act">Slujbă</label>
+                    <input type="text" id="act" list="acts" autocomplete="off" value="@_act"
+                           @oninput="OnActInput"
+                           @onkeydown="e => OnRecordKeyDown(e)">
+                </div>
+                <div>
+                    <label for="person">Persoană</label>
+                    <input type="text" id="person" list="persons" autocomplete="off" value="@_person"
+                           @oninput="OnPersonInput"
+                           @onkeydown="e => OnRecordKeyDown(e)">
+                </div>
+            </div>
+            <datalist id="acts">@foreach (var a in Acts) { <option value="@a"></option> }</datalist>
+            <datalist id="persons">@foreach (var p in Persons) { <option value="@p"></option> }</datalist>
+            <div class="btns">
+                <button @onclick="() => Record(false)">inregistreaza</button>
+                <button class="alt" @onclick="() => Record(true)">inregistreaza(aprox)</button>
+            </div>
+            <div class="msg" aria-live="polite">@_message</div>
+        </section>
+
+        <section>
+            <h2>Capitole</h2>
+            <div class="chs">
+                <div class="in">
+                    @if (_chapters.Count == 0)
+                    {
+                        <p class="s">Niciun capitol încă. Apasă inregistreaza în timpul transmisiunii.</p>
+                    }
+                    else
+                    {
+                        <div class="ch hd"><span>Timp</span><span title="aprox">~</span><span>Slujbă</span><span>Persoană</span><span>Detalii</span><span></span></div>
+                        @foreach (var c in _chapters)
+                        {
+                            <div class="ch">
+                                <input type="text" value="@TimeFormat.Format(c.T)" aria-label="Timp"
+                                       @onchange='e => OnTimeChange(c, e.Value?.ToString() ?? "")'>
+                                <input type="checkbox" checked="@c.Approx" aria-label="Aproximativ"
+                                       @onchange="e => { c.Approx = (bool)(e.Value ?? false); RenderOut(); }">
+                                <input type="text" value="@c.Act" @oninput='e => { c.Act = e.Value?.ToString() ?? ""; RenderOut(); }' aria-label="Slujbă">
+                                <input type="text" value="@c.Person" @oninput='e => { c.Person = e.Value?.ToString() ?? ""; RenderOut(); }' aria-label="Persoană">
+                                <input type="text" value="@c.Details" @oninput='e => { c.Details = e.Value?.ToString() ?? ""; RenderOut(); }' placeholder="detalii" aria-label="Detalii">
+                                <button class="del" aria-label="Șterge capitol" @onclick="() => DeleteChapter(c)">×</button>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+            <textarea readonly aria-label="Text capitole">@_outText</textarea>
+            <div class="row" style="margin-top:8px">
+                <button @onclick="CopyOut">Copiază</button>
+                <button @onclick="DownloadOut">Descarcă .txt</button>
+                <button @onclick="ClearAll">Șterge tot</button>
+            </div>
+        </section>
+
+        <section>
+            <h2>Liste de slujbe și persoane</h2>
+            <p class="s">@_fileStatus</p>
+            <p class="s">Elementele din fișiere sunt fixe. Cele adăugate aici se salvează local și se pot șterge.</p>
+            <div class="two" style="margin-top:8px">
+                <div>
+                    <div class="row">
+                        <input type="text" @bind="_newAct" placeholder="Slujbă nouă">
+                        <button @onclick="AddNewAct">Adaugă</button>
+                    </div>
+                    <ul>
+                        @foreach (var a in Acts)
+                        {
+                            <li>
+                                <span>@a</span>
+                                @if (IsInFile("acts", a))
+                                {
+                                    <span class="hd">din fișier</span>
+                                }
+                                else
+                                {
+                                    <button aria-label="Șterge @a" @onclick='() => RemoveLocal("acts", a)'>×</button>
+                                }
+                            </li>
+                        }
+                        @if (Acts.Count == 0)
+                        {
+                            <li class="s">Goală</li>
+                        }
+                    </ul>
+                </div>
+                <div>
+                    <div class="row">
+                        <input type="text" @bind="_newPerson" placeholder="Persoană nouă">
+                        <button @onclick="AddNewPerson">Adaugă</button>
+                    </div>
+                    <ul>
+                        @foreach (var p in Persons)
+                        {
+                            <li>
+                                <span>@p</span>
+                                @if (IsInFile("persons", p))
+                                {
+                                    <span class="hd">din fișier</span>
+                                }
+                                else
+                                {
+                                    <button aria-label="Șterge @p" @onclick='() => RemoveLocal("persons", p)'>×</button>
+                                }
+                            </li>
+                        }
+                        @if (Persons.Count == 0)
+                        {
+                            <li class="s">Goală</li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>Slujbe cu persoană implicită</h2>
+            <p class="s">Slujbele din Slujbe_slujitor.txt sunt mereu în listă. Dacă o slujbă de aici este aleasă și câmpul Persoană e gol, se folosește persoana implicită de mai jos (sau cea scrisă pe linie după „|”).</p>
+            <div class="row" style="margin-top:8px">
+                <input type="text" list="persons" placeholder="Persoana implicită (slujitor)" autocomplete="off" aria-label="Persoana implicită"
+                       @bind="_defPerson" @bind:event="oninput" @onchange="OnDefPersonChanged">
+            </div>
+            <ul>
+                @foreach (var r in _slujMap.Values.OrderBy(x => x.Name, StringComparer.Create(new CultureInfo("ro"), true)))
+                {
+                    var p = string.IsNullOrEmpty(r.Person) ? _defPerson : r.Person;
+                    <li><span>@r.Name → @(string.IsNullOrEmpty(p) ? "(persoană nesetată)" : p)</span></li>
+                }
+                @if (_slujMap.Count == 0)
+                {
+                    <li class="s">Nicio slujbă în Slujbe_slujitor.txt</li>
+                }
+            </ul>
+        </section>
+    </div>
+
+    <aside class="notes">
+        <section style="flex:1;display:flex;flex-direction:column;min-height:0">
+            <h2>Notițe rapide</h2>
+            <p class="s">Notițele nu se salvează între sesiuni.</p>
+            <div class="row" style="margin:6px 0">
+                <button @onclick="ToggleSharing">@(_sharing ? "Oprește partajarea" : "Partajează notițe")</button>
+                <span class="s" aria-live="polite">@(_sharing ? "Partajat live cu vizualizatorii" : _syncStatus)</span>
+            </div>
+            <textarea aria-label="Notițe rapide" value="@_notes" @oninput='e => { _notes = e.Value?.ToString() ?? ""; OnNotesInput(); }'></textarea>
+        </section>
+        <section>
+            <h2>Alertă pentru toți vizualizatorii</h2>
+            <div class="row">
+                <input type="text" maxlength="300" placeholder="Text alertă" aria-label="Text alertă" @bind="_alertText">
+                <button @onclick="SendAlert">Trimite alertă</button>
+                <button @onclick="ClearAlert">Retrage</button>
+            </div>
+            <p class="s" aria-live="polite" style="margin-top:6px">@_alertStatus</p>
+        </section>
+        <section style="flex:1;display:flex;flex-direction:column;min-height:0">
+            <div class="thh"><h2>Chat echipă</h2><button aria-label="Adaugă chat" @onclick="AddChatPrompt">+ Adaugă chat</button></div>
+            <div class="team" aria-label="Conversații" aria-live="polite">
+                @if (_chats.Count == 0)
+                {
+                    <div class="s" style="padding:4px">Niciun chat. Apasă „+ Adaugă chat”.</div>
+                }
+                else
+                {
+                    @foreach (var c in _chats.Values.Reverse())
+                    {
+                        <div class="th @(c.IsNew ? "new" : "")" @onfocusin="() => c.IsNew = false">
+                            <div class="thh">
+                                <strong>@c.Key · @(c.Nicknames.Count > 0 ? string.Join(", ", c.Nicknames) : "fără mesaje")</strong>
+                                <button class="del" aria-label="Șterge chatul" @onclick="() => RemoveChatAsync(c.Key)">×</button>
+                            </div>
+                            <div class="cv">
+                                @foreach (var m in c.Messages)
+                                {
+                                    <div class="bub @(m.FromMe ? "m" : "")"><small>@(m.FromMe ? "Tu" : m.Nick)</small>@m.Text</div>
+                                }
+                            </div>
+                            <div class="row">
+                                <input type="text" maxlength="500" placeholder="Răspuns" aria-label="Răspuns"
+                                       @bind="c.Draft" @bind:event="oninput" @onkeydown="e => OnChatKeyDown(e, c)">
+                                <button @onclick="() => SendChatAsync(c)">Trimite</button>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+            <p class="s" aria-live="polite" style="margin-top:6px">@_teamStatus</p>
+        </section>
+    </aside>
+</div>
+
+@if (_modalVisible)
+{
+    <div class="modal @(_modalCancelable ? "" : "solid")" role="dialog" aria-modal="true">
+        <div class="mbox">
+            <h2>@_modalTitle</h2>
+            <p class="s">@_modalDesc</p>
+            @if (!_modalFatal)
+            {
+                <input type="@_modalInputType" autocomplete="off" aria-label="Valoare" @bind="_modalValue" @bind:event="oninput" @onkeydown="OnModalKeyDown">
+                <p class="s" style="color:var(--rec);min-height:1.2em" aria-live="polite">@_modalError</p>
+                <div class="row">
+                    <button disabled="@_modalBusy" @onclick="OnModalOk">@_modalOkLabel</button>
+                    @if (_modalCancelable)
+                    {
+                        <button @onclick="OnModalCancel">Anulează</button>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private const string ActsKey = "cl_acts", PersonsKey = "cl_persons", ChaptersKey = "cl_chapters", SlujitorKey = "cl_slujitor", ChanKey = "cl_chan";
+
+    private List<string> _localActs = [];
+    private List<string> _localPersons = [];
+    private List<Chapter> _chapters = [];
+    private List<string> _fileActs = [];
+    private List<string> _filePersons = [];
+    private Dictionary<string, SlujbaRule> _slujMap = new(StringComparer.OrdinalIgnoreCase);
+    private string _defPerson = "";
+    private string _fileStatus = "Se citesc Slujbe.txt și Persoane.txt…";
+    private string _outText = "";
+    private string _message = "";
+    private CancellationTokenSource? _msgCts;
+
+    private string _act = "", _person = "", _newAct = "", _newPerson = "";
+    private string _urlInput = "";
+
+    private double? _playerT;
+    private DateTime _playerSeenAt;
+    private (double Base, DateTime At)? _manual;
+    private double? _now;
+    private string _sourceText = "Fără sursă de timp";
+    private PeriodicTimer? _clockTimer;
+    private string _mode = "channel";
+    private DateTime _lastLoad;
+    private System.Timers.Timer? _retryTimer;
+
+    private AppConfig _cfg = new();
+
+    // notes sharing
+    private string _notes = "";
+    private bool _sharing;
+    private bool _sharedOk;
+    private bool _writing;
+    private bool _dirty;
+    private CancellationTokenSource? _saveDebounce;
+    private string _syncStatus = "";
+
+    // alert
+    private string _alertText = "";
+    private string _alertStatus = "";
+
+    // chat
+    private sealed class ChatMsg { public bool FromMe; public string Nick = ""; public string Text = ""; public double At; }
+    private sealed class ChatCard
+    {
+        public string Key = "";
+        public List<ChatMsg> Messages { get; } = [];
+        public HashSet<string> SeenIds { get; } = [];
+        public List<string> Nicknames { get; } = [];
+        public string Draft = "";
+        public bool IsNew;
+        public SseClient? Sse;
+    }
+    private readonly Dictionary<string, ChatCard> _chats = [];
+    private string _teamStatus = "";
+
+    // modal
+    private bool _modalVisible, _modalCancelable, _modalBusy, _modalFatal;
+    private string _modalTitle = "", _modalDesc = "", _modalValue = "", _modalError = "", _modalOkLabel = "OK", _modalInputType = "password";
+    private TaskCompletionSource<string?>? _modalTcs;
+    private Func<string, Task<string>>? _modalCheck;
+
+    private List<string> Acts
+    {
+        get
+        {
+            var all = _fileActs.Concat(_slujMap.Values.Select(x => x.Name)).Concat(_localActs);
+            return Distinct(all);
+        }
+    }
+
+    private List<string> Persons
+    {
+        get
+        {
+            var all = _filePersons.Concat(_slujMap.Values.Select(x => x.Person))
+                .Append(_defPerson)
+                .Concat(_localPersons);
+            return Distinct(all);
+        }
+    }
+
+    private static List<string> Distinct(IEnumerable<string> arr)
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var outp = new List<string>();
+        foreach (var v in arr)
+        {
+            if (string.IsNullOrEmpty(v)) continue;
+            if (seen.Add(v)) outp.Add(v);
+        }
+        outp.Sort(StringComparer.Create(new CultureInfo("ro"), true));
+        return outp;
+    }
+
+    private bool IsInFile(string kind, string v) => kind == "acts"
+        ? _fileActs.Concat(_slujMap.Values.Select(x => x.Name)).Any(x => string.Equals(x, v, StringComparison.OrdinalIgnoreCase))
+        : _filePersons.Append(_defPerson).Concat(_slujMap.Values.Select(x => x.Person)).Any(x => !string.IsNullOrEmpty(x) && string.Equals(x, v, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync()
+    {
+        _cfg = await ConfigService.GetAsync();
+        _localActs = await Store.GetAsync<List<string>>(ActsKey) ?? [];
+        _localPersons = await Store.GetAsync<List<string>>(PersonsKey) ?? [];
+        _chapters = await Store.GetAsync<List<Chapter>>(ChaptersKey) ?? [];
+        _defPerson = await Store.GetStringAsync(SlujitorKey);
+
+        Player.TimeReceived += OnPlayerTimeReceived;
+        NotesSse.Updated += OnNotesSseUpdated;
+
+        RenderOut();
+        _ = LoadFilesAsync();
+        _ = LoadChannelAsync();
+        _ = StartClockAsync();
+        _ = SubscribeNotesAsync();
+
+        _retryTimer = new System.Timers.Timer(15000);
+        _retryTimer.Elapsed += async (_, _) =>
+        {
+            if (_mode == "channel" && (DateTime.UtcNow - _playerSeenAt).TotalMilliseconds > 60000 && (DateTime.UtcNow - _lastLoad).TotalMilliseconds > 60000)
+                await InvokeAsync(() => LoadChannelAsync());
+        };
+        _retryTimer.Start();
+
+        _ = BootAuthAsync();
+    }
+
+    // ---------- clock ----------
+    private async Task StartClockAsync()
+    {
+        _clockTimer = new PeriodicTimer(TimeSpan.FromMilliseconds(250));
+        while (await _clockTimer.WaitForNextTickAsync())
+        {
+            var live = _playerT is not null && (DateTime.UtcNow - _playerSeenAt).TotalMilliseconds < 3000;
+            double? t = live ? _playerT : (_manual is { } man ? man.Base + (DateTime.UtcNow - man.At).TotalSeconds : null);
+            _now = t;
+            _sourceText = t is null ? "Fără sursă de timp" : live ? "Timp din player YouTube" : "Ceas manual";
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void OnPlayerTimeReceived(double t)
+    {
+        _playerT = t;
+        _playerSeenAt = DateTime.UtcNow;
+    }
+
+    // ---------- player ----------
+    private static string? VidId(string s)
+    {
+        s = s.Trim();
+        if (System.Text.RegularExpressions.Regex.IsMatch(s, @"^[\w-]{11}$")) return s;
+        var m = System.Text.RegularExpressions.Regex.Match(s, @"(?:v=|youtu\.be/|/live/|/embed/|/shorts/)([\w-]{11})");
+        return m.Success ? m.Groups[1].Value : null;
+    }
+
+    private async Task MountAsync(string path)
+    {
+        _lastLoad = DateTime.UtcNow;
+        _playerT = null;
+        _playerSeenAt = default;
+        await Player.MountAsync("vid", path);
+    }
+
+    private string _storedChan = "";
+
+    private string ChanId()
+    {
+        var c = (!string.IsNullOrEmpty(_cfg.ChannelId) ? _cfg.ChannelId : _storedChan).Trim();
+        return System.Text.RegularExpressions.Regex.IsMatch(c, @"^UC[\w-]{22}$") ? c : "";
+    }
+
+    private async Task<bool> LoadChannelAsync()
+    {
+        _storedChan = await Store.GetStringAsync(ChanKey);
+        var c = ChanId();
+        if (string.IsNullOrEmpty(c))
+        {
+            Say("Lipsește ID-ul canalului: setează channelId în config.js sau lipește-l (UC…) în câmpul de link.");
+            return false;
+        }
+        _mode = "channel";
+        await MountAsync("live_stream?channel=" + c + "&");
+        return true;
+    }
+
+    private async Task OnLoadClick()
+    {
+        var v = _urlInput.Trim();
+        var ch = System.Text.RegularExpressions.Regex.Match(v, @"UC[\w-]{22}");
+        if (v.Length == 0) { await LoadChannelAsync(); return; }
+        if (ch.Success) { await Store.SetStringAsync(ChanKey, ch.Value); await LoadChannelAsync(); return; }
+        var id = VidId(v);
+        if (id is null) { Say("Link YouTube invalid."); return; }
+        _mode = "video";
+        await MountAsync(id + "?");
+    }
+
+    private Task OnUrlKeyDown(KeyboardEventArgs e) => e.Key == "Enter" ? OnLoadClick() : Task.CompletedTask;
+
+    // ---------- lists ----------
+    private async Task<List<string>?> LoadTxtAsync(string name)
+    {
+        try
+        {
+            var resp = await Http.GetAsync(name);
+            if (!resp.IsSuccessStatusCode) return null;
+            var text = await resp.Content.ReadAsStringAsync();
+            return text.TrimStart('\uFEFF')
+                .Split(["\r\n", "\n"], StringSplitOptions.None)
+                .Select(Norm)
+                .Where(l => l.Length > 0 && !l.StartsWith('#'))
+                .ToList();
+        }
+        catch { return null; }
+    }
+
+    private static string Norm(string s) => System.Text.RegularExpressions.Regex.Replace(s.Trim(), @"\s+", " ");
+
+    private async Task LoadFilesAsync()
+    {
+        var a = await LoadTxtAsync("Slujbe.txt");
+        var p = await LoadTxtAsync("Persoane.txt");
+        var sl = await LoadTxtAsync("Slujbe_slujitor.txt");
+        _fileActs = a ?? [];
+        _filePersons = p ?? [];
+        _slujMap = new Dictionary<string, SlujbaRule>(StringComparer.OrdinalIgnoreCase);
+        foreach (var l in sl ?? [])
+        {
+            var parts = l.Split('|').Select(Norm).ToArray();
+            if (parts.Length > 0 && parts[0].Length > 0)
+                _slujMap[parts[0]] = new SlujbaRule(parts[0], parts.Length > 1 ? parts[1] : "");
+        }
+        var miss = new[] { a is null ? "Slujbe.txt" : "", p is null ? "Persoane.txt" : "", sl is null ? "Slujbe_slujitor.txt" : "" }
+            .Where(x => x.Length > 0).ToList();
+        _fileStatus = miss.Count > 0
+            ? "Nu am putut citi: " + string.Join(", ", miss) + " (verifică că sunt în același folder cu pagina)."
+            : "Liste încărcate din fișiere.";
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private string Rule(string act) => _slujMap.TryGetValue(act, out var r) ? (string.IsNullOrEmpty(r.Person) ? _defPerson : r.Person) : "";
+
+    private async Task AddLocal(string kind, string v)
+    {
+        v = Norm(v);
+        if (v.Length == 0) return;
+        var loc = kind == "acts" ? _localActs : _localPersons;
+        if (IsInFile(kind, v) || loc.Any(x => string.Equals(x, v, StringComparison.OrdinalIgnoreCase))) return;
+        loc.Add(v);
+        loc.Sort(StringComparer.Create(new CultureInfo("ro"), true));
+        await Store.SetAsync(kind == "acts" ? ActsKey : PersonsKey, loc);
+    }
+
+    private async Task AddNewAct() { await AddLocal("acts", _newAct); _newAct = ""; }
+    private async Task AddNewPerson() { await AddLocal("persons", _newPerson); _newPerson = ""; }
+
+    private async Task RemoveLocal(string kind, string v)
+    {
+        var loc = kind == "acts" ? _localActs : _localPersons;
+        var i = loc.FindIndex(x => x == v);
+        if (i >= 0)
+        {
+            loc.RemoveAt(i);
+            await Store.SetAsync(kind == "acts" ? ActsKey : PersonsKey, loc);
+        }
+    }
+
+    private async Task OnDefPersonChanged()
+    {
+        _defPerson = Norm(_defPerson);
+        await Store.SetStringAsync(SlujitorKey, _defPerson);
+    }
+
+    private Task OnActInput(ChangeEventArgs e)
+    {
+        _act = e.Value?.ToString() ?? "";
+        return OnAutocompleteInput("act", _act, Acts);
+    }
+
+    private Task OnPersonInput(ChangeEventArgs e)
+    {
+        _person = e.Value?.ToString() ?? "";
+        return OnAutocompleteInput("person", _person, Persons);
+    }
+
+    private async Task OnAutocompleteInput(string inputId, string value, List<string> list)
+    {
+        if (value.Length == 0) return;
+        var folded = Fold(value);
+        var hit = list.FirstOrDefault(x => Fold(x).Length > folded.Length && Fold(x).StartsWith(folded));
+        if (hit is null) return;
+        await Browser.AutocompleteFillAsync(inputId, value, hit);
+        if (inputId == "act") _act = hit; else if (inputId == "person") _person = hit;
+    }
+
+    private static string Fold(string s) =>
+        new string(s.Normalize(System.Text.NormalizationForm.FormD)
+            .Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+            .ToArray()).ToLowerInvariant();
+
+    // ---------- chapters ----------
+    private void RenderOut()
+    {
+        _chapters.Sort((a, b) => a.T.CompareTo(b.T));
+        _outText = string.Join("\n", _chapters.Select(c => c.Line()));
+        _ = Store.SetAsync(ChaptersKey, _chapters);
+    }
+
+    private void OnTimeChange(Chapter c, string value)
+    {
+        var v = TimeFormat.Parse(value);
+        if (v is not null) c.T = v.Value;
+        RenderOut();
+    }
+
+    private void DeleteChapter(Chapter c)
+    {
+        _chapters.Remove(c);
+        RenderOut();
+    }
+
+    private void Say(string m)
+    {
+        _message = m;
+        _msgCts?.Cancel();
+        _msgCts = new CancellationTokenSource();
+        var token = _msgCts.Token;
+        _ = Task.Delay(4000, token).ContinueWith(t =>
+        {
+            if (!t.IsCanceled) InvokeAsync(() => { _message = ""; StateHasChanged(); });
+        }, TaskScheduler.Default);
+    }
+
+    private async Task Record(bool approx)
+    {
+        var t = _now;
+        if (t is null) { Say("Nu există timp: încarcă videoclipul și pornește-l, sau pornește ceasul manual."); return; }
+        var act = Norm(_act);
+        if (act.Length == 0) { Say("Introdu o slujbă."); return; }
+        var person = Norm(_person);
+        if (person.Length == 0) person = Rule(act);
+        await AddLocal("acts", act);
+        if (person.Length > 0) await AddLocal("persons", person);
+        _chapters.Add(new Chapter { T = (int)Math.Floor(t.Value), Approx = approx, Act = act, Person = person, Details = "" });
+        RenderOut();
+        Say($"Înregistrat {TimeFormat.Format(t.Value)}{(approx ? " (aprox)" : "")} - {act}{(person.Length > 0 ? " - " + person : "")}");
+        _act = ""; _person = "";
+    }
+
+    private Task OnRecordKeyDown(KeyboardEventArgs e) => e.Key == "Enter" ? Record(e.ShiftKey) : Task.CompletedTask;
+
+    private async Task CopyOut() { if (await Browser.CopyToClipboardAsync(_outText)) Say("Copiat."); }
+    private async Task DownloadOut() => await Browser.DownloadTextAsync("capitole.txt", _outText + "\n");
+    private void ClearAll() { _chapters.Clear(); RenderOut(); }
+
+    // ---------- Firebase: shared notes + alert ----------
+    private async Task SubscribeNotesAsync()
+    {
+        if (string.IsNullOrEmpty(_cfg.DbUrl)) return;
+        await NotesSse.StartAsync(_cfg.DbUrl.TrimEnd('/') + "/pub.json");
+    }
+
+    private void OnNotesSseUpdated() => InvokeAsync(StateHasChanged);
+
+    private async Task PushNotesAsync()
+    {
+        if (!_sharing) return;
+        if (_writing) { _dirty = true; return; }
+        _writing = true;
+        try
+        {
+            await Firebase.PutAsync("/pub/notes", new { text = _notes, at = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() });
+            _syncStatus = "Partajat live cu vizualizatorii";
+        }
+        catch (Exception ex) { _syncStatus = "Eroare la partajare: " + ex.Message; }
+        _writing = false;
+        if (_dirty) { _dirty = false; await PushNotesAsync(); }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void OnNotesInput()
+    {
+        _saveDebounce?.Cancel();
+        _saveDebounce = new CancellationTokenSource();
+        var token = _saveDebounce.Token;
+        _ = Task.Delay(400, token).ContinueWith(t => { if (!t.IsCanceled) InvokeAsync(PushNotesAsync); }, TaskScheduler.Default);
+    }
+
+    private async Task ToggleSharing()
+    {
+        if (_sharing)
+        {
+            _sharing = false;
+            try { await Firebase.DeleteAsync("/pub/notes"); } catch { /* ignore */ }
+            return;
+        }
+        if (!_sharedOk)
+        {
+            var v = await AskAsync("Parola sesiunii de partajare",
+                "Introdu parola pentru a partaja notițele cu vizualizatorii. Ți-o cerem o singură dată pe sesiune.",
+                "password", cancelable: true, okLabel: "Partajează",
+                check: async pw =>
+                {
+                    try
+                    {
+                        var real = await Firebase.GetAsync("/config/sharePw");
+                        if (real is null) return "Lipsește config/sharePw în Firebase.";
+                        return real.ToString() == pw ? "" : "Parolă greșită.";
+                    }
+                    catch (Exception ex) { return "Eroare: " + ex.Message; }
+                });
+            if (v is null) return;
+            _sharedOk = true;
+        }
+        _sharing = true;
+        await PushNotesAsync();
+    }
+
+    private async Task SendAlert()
+    {
+        var m = _alertText.Trim();
+        if (m.Length == 0) { _alertStatus = "Scrie textul alertei."; return; }
+        try
+        {
+            await Firebase.PutAsync("/pub/alert", new { m = m[..Math.Min(300, m.Length)], id = Guid.NewGuid().ToString("N")[..8], at = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() });
+            _alertText = "";
+            _alertStatus = "Alertă trimisă tuturor.";
+        }
+        catch (Exception ex) { _alertStatus = "Eroare: " + ex.Message; }
+    }
+
+    private async Task ClearAlert()
+    {
+        try { await Firebase.DeleteAsync("/pub/alert"); _alertStatus = "Alertă retrasă."; }
+        catch (Exception ex) { _alertStatus = "Eroare: " + ex.Message; }
+    }
+
+    // ---------- chat ----------
+    private async Task AddChatCardAsync(string key)
+    {
+        if (_chats.ContainsKey(key)) return;
+        var card = new ChatCard { Key = key };
+        _chats[key] = card;
+        var sse = new SseClient(JS);
+        card.Sse = sse;
+        sse.Updated += () => RenderChatCard(card);
+        sse.Errored += () => InvokeAsync(() => { _teamStatus = "Conexiune chat întreruptă, se reconectează…"; StateHasChanged(); });
+        await sse.StartAsync(_cfg.DbUrl.TrimEnd('/') + "/chats/" + key + "/msgs.json");
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void RenderChatCard(ChatCard card)
+    {
+        var sse = card.Sse!;
+        var list = sse.Root
+            .Select(kv => (Id: kv.Key, Node: kv.Value))
+            .Where(x => x.Node is not null && x.Node!["m"] is not null)
+            .OrderBy(x => x.Node!["at"]?.GetValue<double>() ?? 0)
+            .ToList();
+        card.Nicknames.Clear();
+        foreach (var n in list.Where(x => x.Node!["f"]?.GetValue<string>() == "v")
+                     .Select(x => x.Node!["n"]?.GetValue<string>() ?? "Anonim").Distinct())
+            card.Nicknames.Add(n);
+
+        foreach (var (id, node) in list)
+        {
+            if (!card.SeenIds.Add(id)) continue;
+            var f = node!["f"]?.GetValue<string>() ?? "";
+            card.Messages.Add(new ChatMsg
+            {
+                FromMe = f == "m",
+                Nick = f == "m" ? "Tu" : (node["n"]?.GetValue<string>() ?? "Anonim"),
+                Text = node["m"]?.GetValue<string>() ?? "",
+                At = node["at"]?.GetValue<double>() ?? 0
+            });
+            if (f != "m") card.IsNew = true;
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SendChatAsync(ChatCard card)
+    {
+        var m = card.Draft.Trim();
+        if (m.Length == 0) return;
+        card.Draft = "";
+        try
+        {
+            await Firebase.PutAsync($"/chats/{card.Key}/msgs/{Guid.NewGuid():N}",
+                new { f = "m", n = "Echipă", c = "", m = m[..Math.Min(500, m.Length)], at = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() });
+            _teamStatus = "";
+        }
+        catch (Exception ex) { card.Draft = m; _teamStatus = "Eroare la trimitere: " + ex.Message; }
+    }
+
+    private Task OnChatKeyDown(KeyboardEventArgs e, ChatCard card) => e.Key == "Enter" ? SendChatAsync(card) : Task.CompletedTask;
+
+    private async Task RemoveChatAsync(string key)
+    {
+        if (!_chats.TryGetValue(key, out var card)) return;
+        _chats.Remove(key);
+        if (card.Sse is not null) await card.Sse.DisposeAsync();
+        try { await Firebase.DeleteAsync("/chatkeys/" + key); await Firebase.DeleteAsync("/chats/" + key); }
+        catch (Exception ex) { _teamStatus = "Eroare: " + ex.Message; }
+    }
+
+    private async Task AddChatPrompt()
+    {
+        var key = await AskAsync("Adaugă chat",
+            "Scrie o parolă / cheie de acces pe care o va folosi vizualizatorul pentru a-ți scrie (6–40 caractere: litere, cifre, - sau _).",
+            "text", cancelable: true, okLabel: "Adaugă",
+            check: async v =>
+            {
+                if (!System.Text.RegularExpressions.Regex.IsMatch(v, @"^[A-Za-z0-9_-]{6,40}$"))
+                    return "Folosește 6–40 caractere: litere, cifre, - sau _.";
+                try { await Firebase.PutAsync("/chatkeys/" + v, true); return ""; }
+                catch (Exception ex) { return "Eroare: " + ex.Message; }
+            });
+        if (key is not null) await AddChatCardAsync(key);
+    }
+
+    // ---------- boot / auth ----------
+    private async Task BootAuthAsync()
+    {
+        if (string.IsNullOrEmpty(_cfg.DbUrl) || string.IsNullOrEmpty(_cfg.ApiKey) || string.IsNullOrEmpty(_cfg.AdminEmail))
+        {
+            ShowFatal("Configurare incompletă", "Completează dbUrl, apiKey și adminEmail în config.js.");
+            return;
+        }
+        await AskAsync("Parola de acces", "Introdu parola pentru a intra în aplicație.", "password", cancelable: false, okLabel: "Intră",
+            check: async pw =>
+            {
+                try { await Firebase.SignInAsync(pw); return ""; }
+                catch (Exception ex)
+                {
+                    return ex.Message.Contains("INVALID_PASSWORD") || ex.Message.Contains("INVALID_LOGIN_CREDENTIALS") || ex.Message.Contains("EMAIL_NOT_FOUND")
+                        ? "Parolă greșită."
+                        : "Eroare: " + ex.Message;
+                }
+            });
+        if (_cfg.ChatEnabled)
+        {
+            try
+            {
+                var keys = await Firebase.GetAsync("/chatkeys");
+                if (keys is System.Text.Json.Nodes.JsonObject obj)
+                    foreach (var (k, _) in obj) await AddChatCardAsync(k);
+            }
+            catch (Exception ex) { _teamStatus = "Nu am putut încărca chaturile: " + ex.Message; }
+        }
+    }
+
+    private void ShowFatal(string title, string desc)
+    {
+        _modalFatal = true;
+        _modalTitle = title;
+        _modalDesc = desc;
+        _modalVisible = true;
+        StateHasChanged();
+    }
+
+    // ---------- generic modal "ask" dialog ----------
+    private Task<string?> AskAsync(string title, string desc, string type, bool cancelable, string okLabel, Func<string, Task<string>> check)
+    {
+        _modalTcs = new TaskCompletionSource<string?>();
+        _modalTitle = title;
+        _modalDesc = desc;
+        _modalInputType = type;
+        _modalCancelable = cancelable;
+        _modalOkLabel = okLabel;
+        _modalCheck = check;
+        _modalValue = "";
+        _modalError = "";
+        _modalFatal = false;
+        _modalVisible = true;
+        StateHasChanged();
+        return _modalTcs.Task;
+    }
+
+    private async Task OnModalOk()
+    {
+        var v = _modalValue.Trim();
+        if (v.Length == 0) { _modalError = "Introdu o valoare."; return; }
+        _modalBusy = true;
+        var err = _modalCheck is null ? "" : await _modalCheck(v);
+        _modalBusy = false;
+        if (!string.IsNullOrEmpty(err)) { _modalError = err; return; }
+        _modalVisible = false;
+        _modalTcs?.TrySetResult(v);
+    }
+
+    private void OnModalCancel()
+    {
+        _modalVisible = false;
+        _modalTcs?.TrySetResult(null);
+    }
+
+    private Task OnModalKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") return OnModalOk();
+        if (e.Key == "Escape" && _modalCancelable) OnModalCancel();
+        return Task.CompletedTask;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _clockTimer?.Dispose();
+        _retryTimer?.Dispose();
+        Player.TimeReceived -= OnPlayerTimeReceived;
+        NotesSse.Updated -= OnNotesSseUpdated;
+        await NotesSse.DisposeAsync();
+        foreach (var c in _chats.Values)
+            if (c.Sse is not null) await c.Sse.DisposeAsync();
+    }
+}

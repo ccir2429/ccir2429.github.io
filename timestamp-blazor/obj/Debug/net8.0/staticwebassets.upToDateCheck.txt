@@ -1,0 +1,13 @@
+wwwroot\css\styles.css
+wwwroot\index.html
+wwwroot\js\config.js
+wwwroot\js\config.template.js
+wwwroot\js\index.js
+wwwroot\js\interop.js
+wwwroot\js\loader.js
+wwwroot\js\sse-interop.js
+wwwroot\js\viewer.js
+wwwroot\js\youtube-interop.js
+wwwroot\Persoane.txt
+wwwroot\Slujbe.txt
+wwwroot\Slujbe_slujitor.txt

@@ -1,0 +1,44 @@
+@page "/viewer"
+@inject IJSRuntime JS
+
+<main>
+    <h1>Notițe rapide</h1>
+    <p id="st" aria-live="polite">Se conectează…</p>
+    <div id="banner" role="alert" hidden><span id="btxt"></span><button id="bx" aria-label="Închide bannerul">×</button></div>
+    <textarea id="t" readonly aria-label="Notițe rapide, doar citire"></textarea>
+
+    <section id="chat">
+        <h2>Chat cu echipa</h2>
+        <div id="lock">
+            <p>Introdu o poreclă și parola echipei pentru a scrie în chat.</p>
+            <div class="row">
+                <input type="text" id="nick" maxlength="40" placeholder="Poreclă" autocomplete="off" aria-label="Poreclă">
+                <input type="password" id="pw" placeholder="Parola echipei" autocomplete="off" aria-label="Parola echipei">
+                <button id="enter">Intră în chat</button>
+            </div>
+        </div>
+        <div id="room" hidden>
+            <div id="cv" role="log" aria-live="polite" aria-label="Conversația cu echipa"></div>
+            <div class="row">
+                <input type="text" id="msg" maxlength="500" placeholder="Scrie un mesaj pentru echipă" aria-label="Mesaj">
+                <button id="send">Trimite</button>
+            </div>
+        </div>
+        <p id="ss" aria-live="polite" style="margin-top:6px"></p>
+    </section>
+</main>
+
+@code {
+    private bool _loaded;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // viewer.js manipulates the DOM directly by element id, so it must run only
+        // after Blazor has rendered this markup (see loader.js: loadViewerScripts).
+        if (firstRender && !_loaded)
+        {
+            _loaded = true;
+            await JS.InvokeVoidAsync("timestampInterop.loadViewerScripts");
+        }
+    }
+}

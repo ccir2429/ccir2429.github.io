@@ -1,0 +1,6 @@
+# O slujbă pe linie. Liniile goale și cele care încep cu # sunt ignorate.
+Anunțuri slujbe
+Anunțuri și încheiere
+Mesaj de bun venit
+Scurt mesaj
+Citire cuvânt
