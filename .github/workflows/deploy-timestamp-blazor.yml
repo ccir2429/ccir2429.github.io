@@ -1,0 +1,83 @@
+name: Deploy TimestampBlazor to GitHub Pages
+
+on:
+  push:
+    branches: [ church ]
+    paths:
+      - 'timestamp-blazor/**'
+      - '.github/workflows/deploy-timestamp-blazor.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      PROJECT_PATH: timestamp-blazor/TimestampBlazor.csproj
+      PUBLISH_DIR: timestamp-blazor/bin/Release/net8.0/publish/wwwroot
+      BASE_HREF: /${{ github.event.repository.name }}/
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore "$PROJECT_PATH"
+
+      - name: Publish
+        run: dotnet publish "$PROJECT_PATH" -c Release -o timestamp-blazor/bin/Release/net8.0/publish
+
+      # AppConfig (TimestampBlazor.Services.AppConfig) is read from wwwroot/js/config.js
+      # at runtime via window.CFG. Values are injected here from repository secrets so
+      # real credentials never need to be committed to source control.
+      - name: Generate config.js from secrets
+        env:
+          CFG_DB_URL: ${{ secrets.FIREBASE_DB_URL }}
+          CFG_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          CFG_ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          CFG_CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
+          CFG_CHAT_ENABLED: ${{ secrets.CHAT_ENABLED }}
+        run: |
+          cat > "$PUBLISH_DIR/js/config.js" <<EOF
+          window.CFG = {
+              dbUrl: "${CFG_DB_URL}",
+              apiKey: "${CFG_API_KEY}",
+              adminEmail: "${CFG_ADMIN_EMAIL}",
+              channelId: "${CFG_CHANNEL_ID}",
+              chatEnabled: ${CFG_CHAT_ENABLED:-false}
+          };
+          EOF
+
+      - name: Set base href for GitHub Pages
+        run: sed -i "s|<base href=\"/\" />|<base href=\"${BASE_HREF}\" />|" "$PUBLISH_DIR/index.html"
+
+      - name: Add .nojekyll
+        run: touch "$PUBLISH_DIR/.nojekyll"
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ env.PUBLISH_DIR }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
