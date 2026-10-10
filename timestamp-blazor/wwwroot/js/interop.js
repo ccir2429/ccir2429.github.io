@@ -45,3 +45,41 @@ window.timestampInterop.autocompleteFill = function (inputId, value, hit) {
     el.value = hit;
     el.setSelectionRange(value.length, hit.length);
 };
+
+// Global record hotkeys (Left Ctrl+F5 = inregistreaza, Left Ctrl+F6 = inregistreaza aprox).
+// Registered on window so they work regardless of focused element, and
+// preventDefault is required so the browser doesn't reload (Ctrl+F5) or open
+// its own shortcut (Ctrl+F6). Left Ctrl is tracked separately via event.code
+// so the right Ctrl key does not trigger the hotkeys.
+window.timestampInterop.registerRecordHotkeys = function (dotNetRef) {
+    let leftCtrlDown = false;
+    const handler = function (e) {
+        if (e.code === 'ControlLeft') leftCtrlDown = true;
+        if (!leftCtrlDown) return;
+        if (e.key === 'F5') {
+            e.preventDefault();
+            dotNetRef.invokeMethodAsync('OnRecordHotkey', false);
+        } else if (e.key === 'F6') {
+            e.preventDefault();
+            dotNetRef.invokeMethodAsync('OnRecordHotkey', true);
+        }
+    };
+    const upHandler = function (e) {
+        if (e.code === 'ControlLeft') leftCtrlDown = false;
+    };
+    window.addEventListener('keydown', handler);
+    window.addEventListener('keyup', upHandler);
+    window.timestampInterop._recordHotkeyHandler = handler;
+    window.timestampInterop._recordHotkeyUpHandler = upHandler;
+};
+
+window.timestampInterop.unregisterRecordHotkeys = function () {
+    if (window.timestampInterop._recordHotkeyHandler) {
+        window.removeEventListener('keydown', window.timestampInterop._recordHotkeyHandler);
+        window.timestampInterop._recordHotkeyHandler = null;
+    }
+    if (window.timestampInterop._recordHotkeyUpHandler) {
+        window.removeEventListener('keyup', window.timestampInterop._recordHotkeyUpHandler);
+        window.timestampInterop._recordHotkeyUpHandler = null;
+    }
+};

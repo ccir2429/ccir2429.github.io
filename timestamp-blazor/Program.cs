@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using MudBlazor.Services;
 using TimestampBlazor;
 using TimestampBlazor.Services;
 
@@ -14,5 +15,6 @@ builder.Services.AddScoped<BrowserUtilService>();
 builder.Services.AddScoped<FirebaseService>();
 builder.Services.AddTransient<SseClient>();
 builder.Services.AddTransient<YouTubePlayer>();
+builder.Services.AddMudServices();
 
 await builder.Build().RunAsync();

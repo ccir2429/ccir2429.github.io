@@ -13,12 +13,11 @@
     <p aria-live="polite">@_status</p>
     @if (_alertText is not null)
     {
-        <div role="alert">
-            <span>@_alertText</span>
-            <button aria-label="Închide bannerul" @onclick="DismissAlert">×</button>
-        </div>
+        <MudAlert Severity="Severity.Warning" CloseIconClicked="DismissAlert" ShowCloseIcon="true">
+            @_alertText
+        </MudAlert>
     }
-    <textarea readonly aria-label="Notițe rapide, doar citire" value="@_notes"></textarea>
+    <MudTextField T="string" Value="_notes" ReadOnly="true" Lines="6" Variant="Variant.Outlined" aria-label="Notițe rapide, doar citire" />
 
     <section id="chat">
         <h2>Chat cu echipa</h2>
@@ -31,11 +30,11 @@
             <div id="lock">
                 <p>Introdu o poreclă și parola echipei pentru a scrie în chat.</p>
                 <div class="row">
-                    <input type="text" maxlength="40" placeholder="Poreclă" autocomplete="off" aria-label="Poreclă"
-                           value="@_nick" @oninput='e => _nick = e.Value?.ToString() ?? ""' @onkeydown="OnLockKeyDown">
-                    <input type="password" placeholder="Parola echipei" autocomplete="off" aria-label="Parola echipei"
-                           value="@_pw" @oninput='e => _pw = e.Value?.ToString() ?? ""' @onkeydown="OnLockKeyDown">
-                    <button @onclick="EnterAsync">Intră în chat</button>
+                    <MudTextField T="string" MaxLength="40" Placeholder="Poreclă" aria-label="Poreclă"
+                                  Value="_nick" ValueChanged='e => _nick = e' Immediate="true" OnKeyDown="OnLockKeyDown" />
+                    <MudTextField T="string" InputType="InputType.Password" Placeholder="Parola echipei" aria-label="Parola echipei"
+                                  Value="_pw" ValueChanged='e => _pw = e' Immediate="true" OnKeyDown="OnLockKeyDown" />
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="EnterAsync">Intră în chat</MudButton>
                 </div>
             </div>
         }
@@ -59,9 +58,9 @@
                     }
                 </div>
                 <div class="row">
-                    <input type="text" maxlength="500" placeholder="Scrie un mesaj pentru echipă" aria-label="Mesaj"
-                           value="@_msg" @oninput='e => _msg = e.Value?.ToString() ?? ""' @onkeydown="OnMsgKeyDown">
-                    <button @onclick="SendAsync" disabled="@_sending">Trimite</button>
+                    <MudTextField T="string" MaxLength="500" Placeholder="Scrie un mesaj pentru echipă" aria-label="Mesaj"
+                                  Value="_msg" ValueChanged='e => _msg = e' Immediate="true" OnKeyDown="OnMsgKeyDown" />
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SendAsync" Disabled="@_sending">Trimite</MudButton>
                 </div>
             </div>
         }

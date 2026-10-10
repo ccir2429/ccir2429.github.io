@@ -12,235 +12,237 @@
 @inject YouTubePlayer Player
 @implements IAsyncDisposable
 
-<div class="wrap">
-    <div class="col">
-        <section>
-            <h1>Capitole YouTube Live</h1>
-            <p class="s">Lipește linkul transmisiunii, apoi apasă butonul la fiecare schimbare de slujbă.</p>
-            <div class="row" style="margin-top:10px">
-                <input type="text" @bind="_urlInput" @bind:event="oninput" @onkeydown="OnUrlKeyDown"
-                       placeholder="Gol = live-ul canalului. Sau link / ID video" aria-label="Link YouTube">
-                <button @onclick="OnLoadClick">Încarcă</button>
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-4">
+<MudGrid>
+<MudItem xs="12" md="8">
+    <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h5">Capitole YouTube Live</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">Lipește linkul transmisiunii, apoi apasă butonul la fiecare schimbare de slujbă.</MudText>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px">
+                <MudTextField T="string" @bind-Value="_urlInput" Immediate="true" OnKeyDown="OnUrlKeyDown"
+                              Placeholder="Gol = live-ul canalului. Sau link / ID video" aria-label="Link YouTube" Class="flex-grow-1" />
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OnLoadClick">Încarcă</MudButton>
             </div>
-            <div class="vid" id="vid"></div>
-            <div class="clock">
-                <b>@(_now is null ? "--:--" : TimeFormat.Format(_now.Value))</b>
-                <span class="src @(_now is not null ? "ok" : "")">@_sourceText</span>
+            <div id="vid" style="aspect-ratio:16/9;background:#000;border-radius:4px;overflow:hidden;margin-top:10px;width:100%;max-width:420px"></div>
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-top:10px">
+                <MudText Typo="Typo.h4">@(_now is null ? "--:--" : TimeFormat.Format(_now.Value))</MudText>
+                <MudText Typo="Typo.body2" Color="@(_now is not null ? Color.Success : Color.Secondary)">@_sourceText</MudText>
             </div>
 
-            <div class="rec">
-                <div>
-                    <label for="act">Slujbă</label>
-                    <input type="text" id="act" list="acts" autocomplete="off" value="@_act"
-                           @oninput="OnActInput"
-                           @onkeydown="e => OnRecordKeyDown(e)">
-                </div>
-                <div>
-                    <label for="person">Persoană</label>
-                    <input type="text" id="person" list="persons" autocomplete="off" value="@_person"
-                           @oninput="OnPersonInput"
-                           @onkeydown="e => OnRecordKeyDown(e)">
-                </div>
+            <MudGrid Class="mt-2">
+                <MudItem xs="12" sm="6">
+                    <MudAutocomplete T="string" Label="Slujbă" @bind-Value="_act" SearchFunc="SearchActs"
+                                     CoerceText="true" ResetValueOnEmptyText="true" OnKeyDown="e => OnRecordKeyDown(e)" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudAutocomplete T="string" Label="Persoană" @bind-Value="_person" SearchFunc="SearchPersons"
+                                     CoerceText="true" ResetValueOnEmptyText="true" OnKeyDown="e => OnRecordKeyDown(e)" />
+                </MudItem>
+            </MudGrid>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
+                <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="() => Record(false)">inregistreaza (Ctrl+F5)</MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Error" OnClick="() => Record(true)">inregistreaza(aprox) (Ctrl+F6)</MudButton>
             </div>
-            <datalist id="acts">@foreach (var a in Acts) { <option value="@a"></option> }</datalist>
-            <datalist id="persons">@foreach (var p in Persons) { <option value="@p"></option> }</datalist>
-            <div class="btns">
-                <button @onclick="() => Record(false)">inregistreaza</button>
-                <button class="alt" @onclick="() => Record(true)">inregistreaza(aprox)</button>
-            </div>
-            <div class="msg" aria-live="polite">@_message</div>
-        </section>
+            <MudText Typo="Typo.body2" Class="mt-2" aria-live="polite">@_message</MudText>
+        </MudPaper>
 
-        <section>
-            <h2>Capitole</h2>
-            <div class="chs">
-                <div class="in">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6" Class="mb-2">Capitole</MudText>
+            <div style="overflow-x:auto">
+                <div style="min-width:640px">
                     @if (_chapters.Count == 0)
                     {
-                        <p class="s">Niciun capitol încă. Apasă inregistreaza în timpul transmisiunii.</p>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Niciun capitol încă. Apasă inregistreaza în timpul transmisiunii.</MudText>
                     }
                     else
                     {
-                        <div class="ch hd"><span>Timp</span><span title="aprox">~</span><span>Slujbă</span><span>Persoană</span><span>Detalii</span><span></span></div>
+                        <div style="display:grid;grid-template-columns:78px 28px 1fr 1fr 1.4fr 32px;gap:6px;margin-bottom:6px;align-items:center;font-size:12px;color:var(--mud-palette-text-secondary)"><span>Timp</span><span title="aprox">~</span><span>Slujbă</span><span>Persoană</span><span>Detalii</span><span></span></div>
                         @foreach (var c in _chapters)
                         {
-                            <div class="ch">
+                            <div style="display:grid;grid-template-columns:78px 28px 1fr 1fr 1.4fr 32px;gap:6px;margin-bottom:6px;align-items:center">
                                 <input type="text" value="@TimeFormat.Format(c.T)" aria-label="Timp"
                                        @onchange='e => OnTimeChange(c, e.Value?.ToString() ?? "")'>
-                                <input type="checkbox" checked="@c.Approx" aria-label="Aproximativ"
-                                       @onchange="e => { c.Approx = (bool)(e.Value ?? false); RenderOut(); }">
+                                <MudCheckBox T="bool" Value="c.Approx" ValueChanged="e => { c.Approx = e; RenderOut(); }" aria-label="Aproximativ" Dense="true" />
                                 <input type="text" value="@c.Act" @oninput='e => { c.Act = e.Value?.ToString() ?? ""; RenderOut(); }' aria-label="Slujbă">
                                 <input type="text" value="@c.Person" @oninput='e => { c.Person = e.Value?.ToString() ?? ""; RenderOut(); }' aria-label="Persoană">
                                 <input type="text" value="@c.Details" @oninput='e => { c.Details = e.Value?.ToString() ?? ""; RenderOut(); }' placeholder="detalii" aria-label="Detalii">
-                                <button class="del" aria-label="Șterge capitol" @onclick="() => DeleteChapter(c)">×</button>
+                                <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="Șterge capitol" OnClick="() => DeleteChapter(c)" />
                             </div>
                         }
                     }
                 </div>
             </div>
-            <textarea readonly aria-label="Text capitole">@_outText</textarea>
-            <div class="row" style="margin-top:8px">
-                <button @onclick="CopyOut">Copiază</button>
-                <button @onclick="DownloadOut">Descarcă .txt</button>
-                <button @onclick="ClearAll">Șterge tot</button>
+            <MudTextField T="string" Value="_outText" ReadOnly="true" Lines="6" Variant="Variant.Outlined" aria-label="Text capitole" Class="mt-2" />
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+                <MudButton Variant="Variant.Outlined" OnClick="CopyOut">Copiază</MudButton>
+                <MudButton Variant="Variant.Outlined" OnClick="DownloadOut">Descarcă .txt</MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Error" OnClick="ClearAll">Șterge tot</MudButton>
             </div>
-        </section>
+        </MudPaper>
 
-        <section>
-            <h2>Liste de slujbe și persoane</h2>
-            <p class="s">@_fileStatus</p>
-            <p class="s">Elementele din fișiere sunt fixe. Cele adăugate aici se salvează local și se pot șterge.</p>
-            <div class="two" style="margin-top:8px">
-                <div>
-                    <div class="row">
-                        <input type="text" @bind="_newAct" placeholder="Slujbă nouă">
-                        <button @onclick="AddNewAct">Adaugă</button>
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6" Class="mb-2">Liste de slujbe și persoane</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@_fileStatus</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">Elementele din fișiere sunt fixe. Cele adăugate aici se salvează local și se pot șterge.</MudText>
+            <MudGrid Class="mt-2">
+                <MudItem xs="12" sm="6">
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                        <MudTextField T="string" @bind-Value="_newAct" Placeholder="Slujbă nouă" />
+                        <MudButton Variant="Variant.Outlined" OnClick="AddNewAct">Adaugă</MudButton>
                     </div>
-                    <ul>
+                    <ul style="list-style:none;margin:8px 0 0;padding:0;max-height:220px;overflow:auto">
                         @foreach (var a in Acts)
                         {
-                            <li>
+                            <li style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid var(--mud-palette-lines-default)">
                                 <span>@a</span>
                                 @if (IsInFile("acts", a))
                                 {
-                                    <span class="hd">din fișier</span>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">din fișier</MudText>
                                 }
                                 else
                                 {
-                                    <button aria-label="Șterge @a" @onclick='() => RemoveLocal("acts", a)'>×</button>
+                                    <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="@($"Șterge {a}")" OnClick='() => RemoveLocal("acts", a)' />
                                 }
                             </li>
                         }
                         @if (Acts.Count == 0)
                         {
-                            <li class="s">Goală</li>
+                            <li><MudText Typo="Typo.body2" Color="Color.Secondary">Goală</MudText></li>
                         }
                     </ul>
-                </div>
-                <div>
-                    <div class="row">
-                        <input type="text" @bind="_newPerson" placeholder="Persoană nouă">
-                        <button @onclick="AddNewPerson">Adaugă</button>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                        <MudTextField T="string" @bind-Value="_newPerson" Placeholder="Persoană nouă" />
+                        <MudButton Variant="Variant.Outlined" OnClick="AddNewPerson">Adaugă</MudButton>
                     </div>
-                    <ul>
+                    <ul style="list-style:none;margin:8px 0 0;padding:0;max-height:220px;overflow:auto">
                         @foreach (var p in Persons)
                         {
-                            <li>
+                            <li style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid var(--mud-palette-lines-default)">
                                 <span>@p</span>
                                 @if (IsInFile("persons", p))
                                 {
-                                    <span class="hd">din fișier</span>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">din fișier</MudText>
                                 }
                                 else
                                 {
-                                    <button aria-label="Șterge @p" @onclick='() => RemoveLocal("persons", p)'>×</button>
+                                    <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="@($"Șterge {p}")" OnClick='() => RemoveLocal("persons", p)' />
                                 }
                             </li>
                         }
                         @if (Persons.Count == 0)
                         {
-                            <li class="s">Goală</li>
+                            <li><MudText Typo="Typo.body2" Color="Color.Secondary">Goală</MudText></li>
                         }
                     </ul>
-                </div>
-            </div>
-        </section>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
 
-        <section>
-            <h2>Slujbe cu persoană implicită</h2>
-            <p class="s">Slujbele din Slujbe_slujitor.txt sunt mereu în listă. Dacă o slujbă de aici este aleasă și câmpul Persoană e gol, se folosește persoana implicită de mai jos (sau cea scrisă pe linie după „|”).</p>
-            <div class="row" style="margin-top:8px">
-                <input type="text" list="persons" placeholder="Persoana implicită (slujitor)" autocomplete="off" aria-label="Persoana implicită"
-                       @bind="_defPerson" @bind:event="oninput" @onchange="OnDefPersonChanged">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6" Class="mb-2">Slujbe cu persoană implicită</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">Slujbele din Slujbe_slujitor.txt sunt mereu în listă. Dacă o slujbă de aici este aleasă și câmpul Persoană e gol, se folosește persoana implicită de mai jos (sau cea scrisă pe linie după „|”).</MudText>
+            <div style="margin-top:8px">
+                <MudAutocomplete T="string" Label="Persoana implicită (slujitor)" SearchFunc="SearchPersons"
+                                 Value="_defPerson" ValueChanged="OnDefPersonChanged" CoerceText="true" ResetValueOnEmptyText="true" />
             </div>
-            <ul>
+            <ul style="list-style:none;margin:8px 0 0;padding:0;max-height:220px;overflow:auto">
                 @foreach (var r in _slujMap.Values.OrderBy(x => x.Name, StringComparer.Create(new CultureInfo("ro"), true)))
                 {
                     var p = string.IsNullOrEmpty(r.Person) ? _defPerson : r.Person;
-                    <li><span>@r.Name → @(string.IsNullOrEmpty(p) ? "(persoană nesetată)" : p)</span></li>
+                    <li style="padding:4px 0;border-bottom:1px solid var(--mud-palette-lines-default)"><span>@r.Name → @(string.IsNullOrEmpty(p) ? "(persoană nesetată)" : p)</span></li>
                 }
                 @if (_slujMap.Count == 0)
                 {
-                    <li class="s">Nicio slujbă în Slujbe_slujitor.txt</li>
+                    <li><MudText Typo="Typo.body2" Color="Color.Secondary">Nicio slujbă în Slujbe_slujitor.txt</MudText></li>
                 }
             </ul>
-        </section>
+        </MudPaper>
     </div>
+</MudItem>
 
-    <aside class="notes">
-        <section style="flex:1;display:flex;flex-direction:column;min-height:0">
-            <h2>Notițe rapide</h2>
-            <p class="s">Notițele nu se salvează între sesiuni.</p>
-            <div class="row" style="margin:6px 0">
-                <button @onclick="ToggleSharing">@(_sharing ? "Oprește partajarea" : "Partajează notițe")</button>
-                <span class="s" aria-live="polite">@(_sharing ? "Partajat live cu vizualizatorii" : _syncStatus)</span>
+<MudItem xs="12" md="4">
+    <div style="display:flex;flex-direction:column;gap:16px">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6" Class="mb-2">Notițe rapide</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">Notițele nu se salvează între sesiuni.</MudText>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0">
+                <MudButton Variant="Variant.Outlined" OnClick="ToggleSharing">@(_sharing ? "Oprește partajarea" : "Partajează notițe")</MudButton>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" aria-live="polite">@(_sharing ? "Partajat live cu vizualizatorii" : _syncStatus)</MudText>
             </div>
-            <textarea aria-label="Notițe rapide" value="@_notes" @oninput='e => { _notes = e.Value?.ToString() ?? ""; OnNotesInput(); }'></textarea>
-        </section>
-        <section>
-            <h2>Alertă pentru toți vizualizatorii</h2>
-            <div class="row">
-                <input type="text" maxlength="300" placeholder="Text alertă" aria-label="Text alertă" @bind="_alertText">
-                <button @onclick="SendAlert">Trimite alertă</button>
-                <button @onclick="ClearAlert">Retrage</button>
+            <MudTextField T="string" Value="_notes" ValueChanged='e => { _notes = e; OnNotesInput(); }' Lines="6" Variant="Variant.Outlined" aria-label="Notițe rapide" />
+        </MudPaper>
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6" Class="mb-2">Alertă pentru toți vizualizatorii</MudText>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                <MudTextField T="string" MaxLength="300" Placeholder="Text alertă" aria-label="Text alertă" @bind-Value="_alertText" />
+                <MudButton Variant="Variant.Filled" Color="Color.Warning" OnClick="SendAlert">Trimite alertă</MudButton>
+                <MudButton Variant="Variant.Outlined" OnClick="ClearAlert">Retrage</MudButton>
             </div>
-            <p class="s" aria-live="polite" style="margin-top:6px">@_alertStatus</p>
-        </section>
-        <section style="flex:1;display:flex;flex-direction:column;min-height:0">
-            <div class="thh"><h2>Chat echipă</h2><button aria-label="Adaugă chat" @onclick="AddChatPrompt">+ Adaugă chat</button></div>
-            <div class="team" aria-label="Conversații" aria-live="polite">
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2" aria-live="polite">@_alertStatus</MudText>
+        </MudPaper>
+        <MudPaper Class="pa-4" Elevation="2">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+                <MudText Typo="Typo.h6">Chat echipă</MudText>
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" aria-label="Adaugă chat" OnClick="AddChatPrompt">+ Adaugă chat</MudButton>
+            </div>
+            <div style="max-height:400px;overflow:auto;background:var(--mud-palette-background-grey);border-radius:4px;padding:6px;margin-top:8px" aria-label="Conversații" aria-live="polite">
                 @if (_chats.Count == 0)
                 {
-                    <div class="s" style="padding:4px">Niciun chat. Apasă „+ Adaugă chat”.</div>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="pa-1">Niciun chat. Apasă „+ Adaugă chat”.</MudText>
                 }
                 else
                 {
                     @foreach (var c in _chats.Values.Reverse())
                     {
-                        <div class="th @(c.IsNew ? "new" : "")" @onfocusin="() => c.IsNew = false">
-                            <div class="thh">
-                                <strong>@c.Key · @(c.Nicknames.Count > 0 ? string.Join(", ", c.Nicknames) : "fără mesaje")</strong>
-                                <button class="del" aria-label="Șterge chatul" @onclick="() => RemoveChatAsync(c.Key)">×</button>
+                        <MudPaper Class="pa-2 mb-2" Elevation="1" @onfocusin="() => c.IsNew = false">
+                            <div style="display:flex;justify-content:space-between;align-items:center">
+                                <strong>@c.Key · @(c.Nicknames.Count > 0 ? string.Join(", ", c.Nicknames) : "fără mesaje")@(c.IsNew ? " ●" : "")</strong>
+                                <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="Șterge chatul" OnClick="() => RemoveChatAsync(c.Key)" />
                             </div>
-                            <div class="cv">
+                            <div style="max-height:150px;overflow:auto;margin:4px 0">
                                 @foreach (var m in c.Messages)
                                 {
-                                    <div class="bub @(m.FromMe ? "m" : "")"><small>@(m.FromMe ? "Tu" : m.Nick)</small>@m.Text</div>
+                                    <div style="max-width:88%;width:fit-content;padding:4px 9px;border-radius:10px;margin:3px @(m.FromMe ? "0 0 3px auto" : "3px 0");overflow-wrap:anywhere;font-size:14px;background:@(m.FromMe ? "var(--mud-palette-primary)" : "var(--mud-palette-background-grey)");color:@(m.FromMe ? "var(--mud-palette-primary-text)" : "inherit")"><small>@(m.FromMe ? "Tu" : m.Nick)</small> @m.Text</div>
                                 }
                             </div>
-                            <div class="row">
-                                <input type="text" maxlength="500" placeholder="Răspuns" aria-label="Răspuns"
-                                       @bind="c.Draft" @bind:event="oninput" @onkeydown="e => OnChatKeyDown(e, c)">
-                                <button @onclick="() => SendChatAsync(c)">Trimite</button>
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                                <MudTextField T="string" MaxLength="500" Placeholder="Răspuns" aria-label="Răspuns"
+                                              @bind-Value="c.Draft" Immediate="true" OnKeyDown="e => OnChatKeyDown(e, c)" />
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="() => SendChatAsync(c)">Trimite</MudButton>
                             </div>
-                        </div>
+                        </MudPaper>
                     }
                 }
             </div>
-            <p class="s" aria-live="polite" style="margin-top:6px">@_teamStatus</p>
-        </section>
-    </aside>
-</div>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2" aria-live="polite">@_teamStatus</MudText>
+        </MudPaper>
+    </div>
+</MudItem>
+</MudGrid>
+</MudContainer>
 
 @if (_modalVisible)
 {
-    <div class="modal @(_modalCancelable ? "" : "solid")" role="dialog" aria-modal="true">
-        <div class="mbox">
-            <h2>@_modalTitle</h2>
-            <p class="s">@_modalDesc</p>
+    <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);z-index:1300" role="dialog" aria-modal="true">
+        <MudPaper Class="pa-4" Style="max-width:420px;width:90%" Elevation="4">
+            <MudText Typo="Typo.h6">@_modalTitle</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@_modalDesc</MudText>
             @if (!_modalFatal)
             {
-                <input type="@_modalInputType" autocomplete="off" aria-label="Valoare" @bind="_modalValue" @bind:event="oninput" @onkeydown="OnModalKeyDown">
-                <p class="s" style="color:var(--rec);min-height:1.2em" aria-live="polite">@_modalError</p>
-                <div class="row">
-                    <button disabled="@_modalBusy" @onclick="OnModalOk">@_modalOkLabel</button>
+                <MudTextField T="string" InputType="@(_modalInputType == "password" ? InputType.Password : InputType.Text)" aria-label="Valoare" @bind-Value="_modalValue" Immediate="true" OnKeyDown="OnModalKeyDown" />
+                <MudText Typo="Typo.body2" Color="Color.Error" Style="min-height:1.2em" aria-live="polite">@_modalError</MudText>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@_modalBusy" OnClick="OnModalOk">@_modalOkLabel</MudButton>
                     @if (_modalCancelable)
                     {
-                        <button @onclick="OnModalCancel">Anulează</button>
+                        <MudButton Variant="Variant.Outlined" OnClick="OnModalCancel">Anulează</MudButton>
                     }
                 </div>
             }
-        </div>
+        </MudPaper>
     </div>
 }
 
@@ -271,6 +273,7 @@
     private string _mode = "channel";
     private DateTime _lastLoad;
     private System.Timers.Timer? _retryTimer;
+    private DotNetObjectReference<Home>? _dotNetRef;
 
     private AppConfig _cfg = new();
 
@@ -371,7 +374,19 @@
         _retryTimer.Start();
 
         _ = BootAuthAsync();
+
+        _dotNetRef = DotNetObjectReference.Create(this);
     }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+            await JS.InvokeVoidAsync("timestampInterop.registerRecordHotkeys", _dotNetRef);
+    }
+
+    [JSInvokable]
+    public Task OnRecordHotkey(bool approx) => Record(approx);
+
 
     // ---------- clock ----------
     private async Task StartClockAsync()
@@ -463,7 +478,7 @@
         catch { return null; }
     }
 
-    private static string Norm(string s) => System.Text.RegularExpressions.Regex.Replace(s.Trim(), @"\s+", " ");
+    private static string Norm(string? s) => System.Text.RegularExpressions.Regex.Replace((s ?? "").Trim(), @"\s+", " ");
 
     private async Task LoadFilesAsync()
     {
@@ -514,32 +529,20 @@
         }
     }
 
-    private async Task OnDefPersonChanged()
+    private async Task OnDefPersonChanged(string? value)
     {
-        _defPerson = Norm(_defPerson);
+        _defPerson = Norm(value);
         await Store.SetStringAsync(SlujitorKey, _defPerson);
     }
 
-    private Task OnActInput(ChangeEventArgs e)
-    {
-        _act = e.Value?.ToString() ?? "";
-        return OnAutocompleteInput("act", _act, Acts);
-    }
+    private Task<IEnumerable<string>> SearchActs(string value, CancellationToken token) => SearchList(value, Acts);
+    private Task<IEnumerable<string>> SearchPersons(string value, CancellationToken token) => SearchList(value, Persons);
 
-    private Task OnPersonInput(ChangeEventArgs e)
+    private static Task<IEnumerable<string>> SearchList(string value, List<string> list)
     {
-        _person = e.Value?.ToString() ?? "";
-        return OnAutocompleteInput("person", _person, Persons);
-    }
-
-    private async Task OnAutocompleteInput(string inputId, string value, List<string> list)
-    {
-        if (value.Length == 0) return;
+        if (string.IsNullOrWhiteSpace(value)) return Task.FromResult<IEnumerable<string>>(list);
         var folded = Fold(value);
-        var hit = list.FirstOrDefault(x => Fold(x).Length > folded.Length && Fold(x).StartsWith(folded));
-        if (hit is null) return;
-        await Browser.AutocompleteFillAsync(inputId, value, hit);
-        if (inputId == "act") _act = hit; else if (inputId == "person") _person = hit;
+        return Task.FromResult(list.Where(x => Fold(x).Contains(folded)));
     }
 
     private static string Fold(string s) =>
@@ -859,5 +862,7 @@
         await NotesSse.DisposeAsync();
         foreach (var c in _chats.Values)
             if (c.Sse is not null) await c.Sse.DisposeAsync();
+        try { await JS.InvokeVoidAsync("timestampInterop.unregisterRecordHotkeys"); } catch (JSDisconnectedException) { }
+        _dotNetRef?.Dispose();
     }
 }
