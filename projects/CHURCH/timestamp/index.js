@@ -233,8 +233,8 @@ function fatal(msg) {
 }
 
 /* autentificare Firebase (parola este verificată de Firebase Authentication) */
-const A = { id: '', rt: '', exp: 0 };
-function setTok(id, rt, sec) { A.id = id; A.rt = rt; A.exp = Date.now() + sec * 1000; ses.set('cl_rt', rt) }
+const firebaseAuth = { id: '', rt: '', exp: 0 };
+function setTok(id, rt, sec) { firebaseAuth.id = id; firebaseAuth.rt = rt; firebaseAuth.exp = Date.now() + sec * 1000; ses.set('cl_rt', rt) }
 async function signIn(pw) {
     const r = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=' + encodeURIComponent(CFG0.apiKey), {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -254,9 +254,9 @@ async function refresh(rt) {
     setTok(j.id_token, j.refresh_token, +j.expires_in);
 }
 async function dbw(method, path, body) {
-    if (!A.id) throw new Error('neautentificat');
-    if (Date.now() > A.exp - 120000) await refresh(A.rt);
-    const r = await fetch(DB + path + '.json?auth=' + encodeURIComponent(A.id), { method, body: body === undefined ? undefined : JSON.stringify(body) });
+    if (!firebaseAuth.id) throw new Error('neautentificat');
+    if (Date.now() > firebaseAuth.exp - 120000) await refresh(firebaseAuth.rt);
+    const r = await fetch(DB + path + '.json?auth=' + encodeURIComponent(firebaseAuth.id), { method, body: body === undefined ? undefined : JSON.stringify(body) });
     if (!r.ok) throw new Error(r.status + ' ' + (await r.text()).slice(0, 100));
     return r.json().catch(() => null);
 }
@@ -386,20 +386,16 @@ $('addchat').onclick = async () => {
     if (key) addChatCard(key);
 };
 
-/* pornire: parola de acces este verificată de Firebase Authentication */
+/* pornire: parola de acces este verificată de Firebase Authentication (cerută la fiecare pornire/reîmprospătare) */
 (async function boot() {
     if (!DB || !CFG0.apiKey || !CFG0.adminEmail) { fatal('Completează dbUrl, apiKey și adminEmail în config.js.'); return }
-    const rt = ses.get('cl_rt');
-    if (rt) { try { await refresh(rt) } catch (e) { ses.set('cl_rt', '') } }
-    if (!A.id) {
-        await ask({
-            title: 'Parola de acces', desc: 'Introdu parola pentru a intra în aplicație.', cancel: false, ok: 'Intră',
-            check: async pw => {
-                try { await signIn(pw); return '' }
-                catch (e) { return /INVALID_PASSWORD|INVALID_LOGIN_CREDENTIALS|EMAIL_NOT_FOUND/.test(e.message) ? 'Parolă greșită.' : 'Eroare: ' + e.message }
-            }
-        });
-    }
+    await ask({
+        title: 'Parola de acces', desc: 'Introdu parola pentru a intra în aplicație.', cancel: false, ok: 'Intră',
+        check: async pw => {
+            try { await signIn(pw); return '' }
+            catch (e) { return /INVALID_PASSWORD|INVALID_LOGIN_CREDENTIALS|EMAIL_NOT_FOUND/.test(e.message) ? 'Parolă greșită.' : 'Eroare: ' + e.message }
+        }
+    });
     if (CHAT_ON) {
         try { const k = await dbw('GET', '/chatkeys'); for (const key in (k || {})) addChatCard(key) }
         catch (e) { tst('Nu am putut încărca chaturile: ' + e.message) }
