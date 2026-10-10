@@ -1031,7 +1031,6 @@ C:\Users\ECOSMICB6\source\repos\ccir2429\ccir2429.github.io\timestamp-blazor\obj
 C:\Users\ECOSMICB6\source\repos\ccir2429\ccir2429.github.io\timestamp-blazor\obj\Debug\net8.0\refint\TimestampBlazor.dll
 C:\Users\ECOSMICB6\source\repos\ccir2429\ccir2429.github.io\timestamp-blazor\obj\Debug\net8.0\TimestampBlazor.pdb
 C:\Users\ECOSMICB6\source\repos\ccir2429\ccir2429.github.io\timestamp-blazor\obj\Debug\net8.0\ref\TimestampBlazor.dll
-C:\Users\ECOSMICB6\source\repos\ccir2429\ccir2429.github.io\timestamp-blazor\obj\Debug\net8.0\staticwebassets.upToDateCheck.txt
-C:\Users\ECOSMICB6\source\repos\ccir2429\ccir2429.github.io\timestamp-blazor\obj\Debug\net8.0\compressed\gp8r6g26a1-{0}-myypl7tfff-myypl7tfff.gz
-C:\Users\ECOSMICB6\source\repos\ccir2429\ccir2429.github.io\timestamp-blazor\obj\Debug\net8.0\compressed\kg73riodhj-{0}-rmxeq7mg1x-rmxeq7mg1x.gz
-C:\Users\ECOSMICB6\source\repos\ccir2429\ccir2429.github.io\timestamp-blazor\obj\Debug\net8.0\compressed\7i9b229ag8-{0}-60v3ry38o9-60v3ry38o9.gz
+C:\Users\ECOSMICB6\source\repos\ccir2429\ccir2429.github.io\timestamp-blazor\obj\Debug\net8.0\compressed\gp8r6g26a1-{0}-38r3r00ip9-38r3r00ip9.gz
+C:\Users\ECOSMICB6\source\repos\ccir2429\ccir2429.github.io\timestamp-blazor\obj\Debug\net8.0\compressed\kg73riodhj-{0}-obi7je7zt7-obi7je7zt7.gz
+C:\Users\ECOSMICB6\source\repos\ccir2429\ccir2429.github.io\timestamp-blazor\obj\Debug\net8.0\compressed\7i9b229ag8-{0}-1wymgypbjj-1wymgypbjj.gz

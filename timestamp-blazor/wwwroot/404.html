@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Capitole YouTube Live</title>
+    <!--
+      GitHub Pages serves this file for any URL that doesn't match a physical
+      file (e.g. a deep link to /viewer). Since this is a Blazor WebAssembly
+      single-page app, we redirect back to index.html while encoding the
+      originally requested path/query/hash in the query string so index.html
+      can restore it via history.replaceState before Blazor's router starts.
+      See: https://github.com/rafgraph/spa-github-pages
+    -->
+    <script>
+        var pathSegmentsToKeep = 0;
+        var l = window.location;
+        l.replace(
+            l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+            l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
+            l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
+            (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+            l.hash
+        );
+    </script>
+</head>
+<body>
+</body>
+</html>

@@ -1,5 +1,6 @@
 @page "/viewer"
 @using System.Net.Http.Json
+@using System.Text.Json.Nodes
 @using TimestampBlazor.Services
 @inject HttpClient Http
 @inject ConfigService ConfigService
@@ -90,6 +91,12 @@
     private SseClient? _notesSse;
     private SseClient? _chatSse;
     private readonly List<ChatMsg> _messages = new();
+    private Timer? _notesPollTimer;
+    private Timer? _chatPollTimer;
+    private bool _notesLive;
+    private bool _polling;
+    private bool _chatLive;
+    private bool _chatPolling;
 
     private sealed class ChatMsg
     {
@@ -125,6 +132,12 @@
             _notesSse.Opened += OnNotesSseOpened;
             _notesSse.Errored += OnNotesSseErrored;
             await _notesSse.StartAsync(_cfg.DbUrl.TrimEnd('/') + "/pub.json");
+
+            // Fallback: some networks (corporate proxies, antivirus, etc.) silently swallow
+            // long-lived SSE streams without ever raising onerror, leaving the UI stuck on
+            // "Se conectează…". Poll the same endpoint periodically so notes/alerts still
+            // show up even when the stream never delivers a single event.
+            _notesPollTimer = new Timer(_ => _ = PollNotesAsync(), null, TimeSpan.FromSeconds(4), TimeSpan.FromSeconds(5));
         }
 
         if (_chatOn)
@@ -141,12 +154,38 @@
     // ---------- shared notes + alert ----------
     private void OnNotesSseUpdated()
     {
-        var pub = _notesSse!.Root;
+        _notesLive = true;
+        ApplyNotesSnapshot(_notesSse!.Root);
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task PollNotesAsync()
+    {
+        if (_notesLive || _polling) return; // SSE already working, or a poll is already in flight
+        _polling = true;
+        try
+        {
+            var pub = await Http.GetFromJsonAsync<JsonObject>(_cfg.DbUrl.TrimEnd('/') + "/pub.json");
+            ApplyNotesSnapshot(pub ?? new JsonObject());
+            await InvokeAsync(StateHasChanged);
+        }
+        catch
+        {
+            // ignore: next tick will retry
+        }
+        finally
+        {
+            _polling = false;
+        }
+    }
+
+    private void ApplyNotesSnapshot(JsonObject pub)
+    {
         var text = pub["notes"]?["text"]?.GetValue<string>();
         if (text is not null)
         {
             _notes = text;
-            _status = "Live: se actualizează automat";
+            _status = _notesLive ? "Live: se actualizează automat" : "Live: se actualizează periodic";
         }
         else
         {
@@ -169,7 +208,6 @@
             _lastAlertId = "";
             _alertText = null;
         }
-        InvokeAsync(StateHasChanged);
     }
 
     private void OnNotesSseOpened()
@@ -226,17 +264,51 @@
         _inRoom = true;
 
         if (_chatSse is not null) await _chatSse.DisposeAsync();
+        _chatPollTimer?.Dispose();
+        _chatPollTimer = null;
+        _chatLive = false;
         _messages.Clear();
         _chatSse = new SseClient(JS);
         _chatSse.Updated += OnChatSseUpdated;
         _chatSse.Errored += () => { _chatStatus = "Conexiune chat întreruptă, se reconectează…"; InvokeAsync(StateHasChanged); };
         _chatSse.Opened += () => { _chatStatus = ""; InvokeAsync(StateHasChanged); };
         await _chatSse.StartAsync(_cfg.DbUrl.TrimEnd('/') + "/chats/" + k + "/msgs.json");
+
+        // Same fallback as notes: poll for new messages in case the SSE stream never
+        // delivers anything (e.g. blocked by a proxy) without raising onerror.
+        _chatPollTimer = new Timer(_ => _ = PollChatAsync(), null, TimeSpan.FromSeconds(4), TimeSpan.FromSeconds(4));
     }
 
     private void OnChatSseUpdated()
     {
-        var list = _chatSse!.Root
+        _chatLive = true;
+        ApplyChatSnapshot(_chatSse!.Root);
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task PollChatAsync()
+    {
+        if (_chatLive || _chatPolling || !_inRoom) return;
+        _chatPolling = true;
+        try
+        {
+            var msgs = await Http.GetFromJsonAsync<JsonObject>(_cfg.DbUrl.TrimEnd('/') + "/chats/" + _chatKey + "/msgs.json");
+            ApplyChatSnapshot(msgs ?? new JsonObject());
+            await InvokeAsync(StateHasChanged);
+        }
+        catch
+        {
+            // ignore: next tick will retry
+        }
+        finally
+        {
+            _chatPolling = false;
+        }
+    }
+
+    private void ApplyChatSnapshot(JsonObject root)
+    {
+        var list = root
             .Select(kv => (Id: kv.Key, Node: kv.Value))
             .Where(x => x.Node is not null && x.Node!["m"] is not null)
             .OrderBy(x => x.Node!["at"]?.GetValue<double>() ?? 0)
@@ -256,7 +328,6 @@
                 At = node["at"]?.GetValue<double>() ?? 0
             });
         }
-        InvokeAsync(StateHasChanged);
     }
 
     private async Task SendAsync()
@@ -290,6 +361,8 @@
 
     public async ValueTask DisposeAsync()
     {
+        _notesPollTimer?.Dispose();
+        _chatPollTimer?.Dispose();
         if (_notesSse is not null)
         {
             _notesSse.Updated -= OnNotesSseUpdated;

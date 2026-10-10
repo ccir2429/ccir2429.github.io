@@ -5,6 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Capitole YouTube Live</title>
     <base href="/" />
+    <!--
+      Companion to 404.html: restores the deep-linked path (e.g. /viewer)
+      that GitHub Pages redirected here as a query string, before Blazor's
+      router starts. See: https://github.com/rafgraph/spa-github-pages
+    -->
+    <script>
+        (function (l) {
+            if (l.search[1] === '/') {
+                var decoded = l.search.slice(1).split('&').map(function (s) {
+                    return s.replace(/~and~/g, '&');
+                }).join('?');
+                window.history.replaceState(null, null,
+                    l.pathname.slice(0, -1) + decoded + l.hash
+                );
+            }
+        }(window.location));
+    </script>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap" />
     <link rel="stylesheet" href="css/styles.css" />
 </head>
