@@ -1,3 +1,0 @@
-C:\Users\ECOSMICB6\source\repos\ccir2429\ccir2429.github.io\timestamp-blazor\wwwroot\js\index.js
-C:\Users\ECOSMICB6\source\repos\ccir2429\ccir2429.github.io\timestamp-blazor\wwwroot\js\loader.js
-C:\Users\ECOSMICB6\source\repos\ccir2429\ccir2429.github.io\timestamp-blazor\wwwroot\js\viewer.js
