@@ -20,6 +20,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     env:
       PROJECT_PATH: timestamp-blazor/TimestampBlazor.csproj
       PUBLISH_DIR: timestamp-blazor/bin/Release/net8.0/publish/wwwroot
@@ -74,6 +76,9 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
