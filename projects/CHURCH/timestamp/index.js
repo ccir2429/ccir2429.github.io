@@ -182,6 +182,7 @@ function autoComplete(id, getList) {
 }
 autoComplete('act', () => acts);
 autoComplete('person', () => persons);
+autoComplete('slujitor', () => persons);
 ['act', 'person'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); record(e.shiftKey) } }));
 
 $('copy').onclick = async () => { try { await navigator.clipboard.writeText($('out').value); say('Copiat.') } catch (e) { $('out').select(); document.execCommand('copy'); say('Copiat.') } };
