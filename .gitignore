@@ -6,3 +6,5 @@
 /projects/CHURCH/timestamp/config.js
 timestamp-blazor/wwwroot/js/config.js
 /_site/
+timestamp-blazor/bin/
+timestamp-blazor/obj/

@@ -1,23 +1,23 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\ECOSMICB6\\source\\repos\\ccir2429\\ccir2429.github.io\\timestamp-blazor\\TimestampBlazor.csproj": {}
+    "C:\\Users\\cosma.LAPTOP-64Q13MP0\\source\\repos\\ccir2429\\ccir2429.github.io\\timestamp-blazor\\TimestampBlazor.csproj": {}
   },
   "projects": {
-    "C:\\Users\\ECOSMICB6\\source\\repos\\ccir2429\\ccir2429.github.io\\timestamp-blazor\\TimestampBlazor.csproj": {
+    "C:\\Users\\cosma.LAPTOP-64Q13MP0\\source\\repos\\ccir2429\\ccir2429.github.io\\timestamp-blazor\\TimestampBlazor.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\ECOSMICB6\\source\\repos\\ccir2429\\ccir2429.github.io\\timestamp-blazor\\TimestampBlazor.csproj",
+        "projectUniqueName": "C:\\Users\\cosma.LAPTOP-64Q13MP0\\source\\repos\\ccir2429\\ccir2429.github.io\\timestamp-blazor\\TimestampBlazor.csproj",
         "projectName": "TimestampBlazor",
-        "projectPath": "C:\\Users\\ECOSMICB6\\source\\repos\\ccir2429\\ccir2429.github.io\\timestamp-blazor\\TimestampBlazor.csproj",
-        "packagesPath": "C:\\Users\\ECOSMICB6\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\ECOSMICB6\\source\\repos\\ccir2429\\ccir2429.github.io\\timestamp-blazor\\obj\\",
+        "projectPath": "C:\\Users\\cosma.LAPTOP-64Q13MP0\\source\\repos\\ccir2429\\ccir2429.github.io\\timestamp-blazor\\TimestampBlazor.csproj",
+        "packagesPath": "C:\\Users\\cosma.LAPTOP-64Q13MP0\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\cosma.LAPTOP-64Q13MP0\\source\\repos\\ccir2429\\ccir2429.github.io\\timestamp-blazor\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\ECOSMICB6\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\cosma.LAPTOP-64Q13MP0\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -26,6 +26,7 @@
         ],
         "sources": {
           "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -91,19 +92,7 @@
           "warn": true,
           "downloadDependencies": [
             {
-              "name": "Microsoft.AspNetCore.App.Ref",
-              "version": "[8.0.31, 8.0.31]"
-            },
-            {
-              "name": "Microsoft.NETCore.App.Ref",
-              "version": "[8.0.31, 8.0.31]"
-            },
-            {
               "name": "Microsoft.NETCore.App.Runtime.Mono.browser-wasm",
-              "version": "[8.0.31, 8.0.31]"
-            },
-            {
-              "name": "Microsoft.WindowsDesktop.App.Ref",
               "version": "[8.0.31, 8.0.31]"
             }
           ],

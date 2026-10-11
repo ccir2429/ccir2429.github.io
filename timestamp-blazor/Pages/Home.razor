@@ -174,51 +174,57 @@
             </div>
             <MudTextField T="string" Value="_notes" ValueChanged='e => { _notes = e; OnNotesInput(); }' Lines="6" Variant="Variant.Outlined" aria-label="Notițe rapide" />
         </MudPaper>
-        <MudPaper Class="pa-4" Elevation="2">
-            <MudText Typo="Typo.h6" Class="mb-2">Alertă pentru toți vizualizatorii</MudText>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-                <MudTextField T="string" MaxLength="300" Placeholder="Text alertă" aria-label="Text alertă" @bind-Value="_alertText" />
-                <MudButton Variant="Variant.Filled" Color="Color.Warning" OnClick="SendAlert">Trimite alertă</MudButton>
-                <MudButton Variant="Variant.Outlined" OnClick="ClearAlert">Retrage</MudButton>
-            </div>
-            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2" aria-live="polite">@_alertStatus</MudText>
-        </MudPaper>
-        <MudPaper Class="pa-4" Elevation="2">
-            <div style="display:flex;justify-content:space-between;align-items:center">
-                <MudText Typo="Typo.h6">Chat echipă</MudText>
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" aria-label="Adaugă chat" OnClick="AddChatPrompt">+ Adaugă chat</MudButton>
-            </div>
-            <div style="max-height:400px;overflow:auto;background:var(--mud-palette-background-grey);border-radius:4px;padding:6px;margin-top:8px" aria-label="Conversații" aria-live="polite">
-                @if (_chats.Count == 0)
-                {
-                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="pa-1">Niciun chat. Apasă „+ Adaugă chat”.</MudText>
-                }
-                else
-                {
-                    @foreach (var c in _chats.Values.Reverse())
-                    {
-                        <MudPaper Class="pa-2 mb-2" Elevation="1" @onfocusin="() => c.IsNew = false">
-                            <div style="display:flex;justify-content:space-between;align-items:center">
-                                <strong>@c.Key · @(c.Nicknames.Count > 0 ? string.Join(", ", c.Nicknames) : "fără mesaje")@(c.IsNew ? " ●" : "")</strong>
-                                <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="Șterge chatul" OnClick="() => RemoveChatAsync(c.Key)" />
-                            </div>
-                            <div style="max-height:150px;overflow:auto;margin:4px 0">
-                                @foreach (var m in c.Messages)
-                                {
-                                    <div style="max-width:88%;width:fit-content;padding:4px 9px;border-radius:10px;margin:3px @(m.FromMe ? "0 0 3px auto" : "3px 0");overflow-wrap:anywhere;font-size:14px;background:@(m.FromMe ? "var(--mud-palette-primary)" : "var(--mud-palette-background-grey)");color:@(m.FromMe ? "var(--mud-palette-primary-text)" : "inherit")"><small>@(m.FromMe ? "Tu" : m.Nick)</small> @m.Text</div>
-                                }
-                            </div>
-                            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-                                <MudTextField T="string" MaxLength="500" Placeholder="Răspuns" aria-label="Răspuns"
-                                              @bind-Value="c.Draft" Immediate="true" OnKeyDown="e => OnChatKeyDown(e, c)" />
-                                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="() => SendChatAsync(c)">Trimite</MudButton>
-                            </div>
-                        </MudPaper>
-                    }
-                }
-            </div>
-            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2" aria-live="polite">@_teamStatus</MudText>
-        </MudPaper>
+        <MudExpansionPanels>
+            <MudExpansionPanel Text="Alertă" MaxHeight="150" Expanded="true">
+                <MudPaper Class="pa-4" Elevation="2">
+                    <MudText Typo="Typo.h6" Class="mb-2">Alertă pentru toți vizualizatorii</MudText>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                        <MudTextField T="string" MaxLength="300" Placeholder="Text alertă" aria-label="Text alertă" @bind-Value="_alertText" />
+                        <MudButton Variant="Variant.Filled" Color="Color.Warning" OnClick="SendAlert">Trimite alertă</MudButton>
+                        <MudButton Variant="Variant.Outlined" OnClick="ClearAlert">Retrage</MudButton>
+                    </div>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2" aria-live="polite">@_alertStatus</MudText>
+                </MudPaper>
+            </MudExpansionPanel>
+            <MudExpansionPanel Text="Chat echipă" MaxHeight="400" Expanded="true">
+                <MudPaper Class="pa-4" Elevation="2">
+                    <div style="display:flex;justify-content:space-between;align-items:center">
+                        <MudText Typo="Typo.h6">Chat echipă</MudText>
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" aria-label="Adaugă chat" OnClick="AddChatPrompt">+ Adaugă chat</MudButton>
+                    </div>
+                    <div style="max-height:400px;overflow:auto;background:var(--mud-palette-background-grey);border-radius:4px;padding:6px;margin-top:8px" aria-label="Conversații" aria-live="polite">
+                        @if (_chats.Count == 0)
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="pa-1">Niciun chat. Apasă „+ Adaugă chat”.</MudText>
+                        }
+                        else
+                        {
+                            @foreach (var c in _chats.Values.Reverse())
+                            {
+                                <MudPaper Class="pa-2 mb-2" Elevation="1" @onfocusin="() => c.IsNew = false">
+                                    <div style="display:flex;justify-content:space-between;align-items:center">
+                                        <strong>@c.Key · @(c.Nicknames.Count > 0 ? string.Join(", ", c.Nicknames) : "fără mesaje")@(c.IsNew ? " ●" : "")</strong>
+                                        <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="Șterge chatul" OnClick="() => RemoveChatAsync(c.Key)" />
+                                    </div>
+                                    <div style="max-height:150px;overflow:auto;margin:4px 0">
+                                        @foreach (var m in c.Messages)
+                                        {
+                                            <div style="max-width:88%;width:fit-content;padding:4px 9px;border-radius:10px;margin:3px @(m.FromMe ? "0 0 3px auto" : "3px 0");overflow-wrap:anywhere;font-size:14px;background:@(m.FromMe ? "var(--mud-palette-primary)" : "var(--mud-palette-background-grey)");color:@(m.FromMe ? "var(--mud-palette-primary-text)" : "inherit")"><small>@(m.FromMe ? "Tu" : m.Nick)</small> @m.Text</div>
+                                        }
+                                    </div>
+                                    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                                        <MudTextField T="string" MaxLength="500" Placeholder="Răspuns" aria-label="Răspuns"
+                                                      @bind-Value="c.Draft" Immediate="true" OnKeyDown="e => OnChatKeyDown(e, c)" />
+                                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="() => SendChatAsync(c)">Trimite</MudButton>
+                                    </div>
+                                </MudPaper>
+                            }
+                        }
+                    </div>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2" aria-live="polite">@_teamStatus</MudText>
+                </MudPaper>
+            </MudExpansionPanel>
+        </MudExpansionPanels>
     </div>
 </MudItem>
 </MudGrid>

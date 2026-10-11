@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("TimestampBlazor")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d515ee2aed6cee6bb8c90460db3e9b611e43ebb7")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+09ea2cf1fab53379278454745a1f8fbd72e4723c")]
 [assembly: System.Reflection.AssemblyProductAttribute("TimestampBlazor")]
 [assembly: System.Reflection.AssemblyTitleAttribute("TimestampBlazor")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
