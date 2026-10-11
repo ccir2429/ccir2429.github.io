@@ -13,13 +13,12 @@
 @implements IAsyncDisposable
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-4">
-<MudSplitPanel @ref="_splitPanel"
+<MudSplitPanel
                    Class="mud-width-full mud-height-full"
-                   Horizontal="_horizontal"
-                   ResetOnDoubleClick="_resetOnDoubleClick"
-                   Rounded="_rounded"
-                   Transparent="_transparent"
-                   Elevation="@(_elevation ? 1 : 0)">
+                   Horizontal="true"
+                   Rounded="true"
+                   Transparent="false"
+                   Elevation="1">
 <FirstPanel>
     <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
         <MudPaper Class="pa-4" Elevation="2">
