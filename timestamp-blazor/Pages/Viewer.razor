@@ -13,7 +13,7 @@
     <p aria-live="polite">@_status</p>
     @if (_alertText is not null)
     {
-        <MudAlert Severity="Severity.Warning" CloseIconClicked="DismissAlert" ShowCloseIcon="true">
+        <MudAlert Severity="Severity.Warning" Variant=Variant.Filled CloseIconClicked="DismissAlert" ShowCloseIcon="true">
             @_alertText
         </MudAlert>
     }
