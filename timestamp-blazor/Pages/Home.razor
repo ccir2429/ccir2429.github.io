@@ -2,6 +2,7 @@
 @using System.Globalization
 @using TimestampBlazor.Models
 @using TimestampBlazor.Services
+@using TimestampBlazor.Shared
 @inject IJSRuntime JS
 @inject HttpClient Http
 @inject ConfigService ConfigService
@@ -10,11 +11,15 @@
 @inject FirebaseService Firebase
 @inject SseClient NotesSse
 @inject YouTubePlayer Player
+@inject MudBlazor.IDialogService DialogService
 @implements IAsyncDisposable
 
-<MudAppBar Color="Color.Secondary" Fixed="false">
+
+
+<MudAppBar Color="Color.Secondary">
     <MudIconButton Icon="@Icons.Material.Filled.Home" Color="Color.Inherit" Edge="Edge.Start" Href="/" />
     <MudIconButton Icon="@Icons.Material.Filled.RemoveRedEye" Color="Color.Inherit" Edge="Edge.Start" Href="/viewer" />
+    <MudIconButton Icon="@Icons.Material.Filled.EditNote" Color="Color.Inherit" Edge="Edge.Start" OnClick="OpenFormatDialog" />
     <MudSpacer />
     @* <MudIconButton Icon="@Icons.Material.Filled.Settings" Color="Color.Inherit" /> *@
 </MudAppBar>
@@ -292,6 +297,11 @@
     private DotNetObjectReference<Home>? _dotNetRef;
 
     private AppConfig _cfg = new();
+
+    private void OpenFormatDialog()
+    {
+        _ = DialogService.ShowAsync<FormatLyrics>("Format Lyrics");
+    }
 
     // notes sharing
     private string _notes = "";
