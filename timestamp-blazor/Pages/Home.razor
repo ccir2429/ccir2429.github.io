@@ -12,10 +12,16 @@
 @inject YouTubePlayer Player
 @implements IAsyncDisposable
 
+<MudAppBar Color="Color.Secondary" Fixed="false">
+    <MudIconButton Icon="@Icons.Material.Filled.Home" Color="Color.Inherit" Edge="Edge.Start" Href="/" />
+    <MudIconButton Icon="@Icons.Material.Filled.RemoveRedEye" Color="Color.Inherit" Edge="Edge.Start" Href="/viewer" />
+    <MudSpacer />
+    @* <MudIconButton Icon="@Icons.Material.Filled.Settings" Color="Color.Inherit" /> *@
+</MudAppBar>
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-4">
 <MudSplitPanel
                    Class="mud-width-full mud-height-full"
-                   Horizontal="true"
+                   Horizontal="false"
                    Rounded="true"
                    Transparent="false"
                    Elevation="1">
@@ -27,7 +33,7 @@
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px">
                 <MudTextField T="string" @bind-Value="_urlInput" Immediate="true" OnKeyDown="OnUrlKeyDown"
                               Placeholder="Gol = live-ul canalului. Sau link / ID video" aria-label="Link YouTube" Class="flex-grow-1" />
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OnLoadClick">Încarcă</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="OnLoadClick">Încarcă</MudButton>
             </div>
             <div id="vid" style="aspect-ratio:16/9;background:#000;border-radius:4px;overflow:hidden;margin-top:10px;width:100%;max-width:420px"></div>
             <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-top:10px">

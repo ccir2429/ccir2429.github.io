@@ -8,6 +8,12 @@
 @inject IJSRuntime JS
 @implements IAsyncDisposable
 
+<MudAppBar Color="Color.Secondary" Fixed="false">
+    <MudIconButton Icon="@Icons.Material.Filled.Home" Color="Color.Inherit" Edge="Edge.Start" Href="/" />
+    <MudSpacer />
+    @* <MudIconButton Icon="@Icons.Material.Filled.Settings" Color="Color.Inherit" /> *@
+</MudAppBar>
+
 <main>
     <h1>Notițe rapide</h1>
     <p aria-live="polite">@_status</p>
