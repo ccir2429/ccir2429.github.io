@@ -8,3 +8,7 @@ timestamp-blazor/wwwroot/js/config.js
 /_site/
 timestamp-blazor/bin/
 timestamp-blazor/obj/
+
+# Build output directories
+**/bin/
+**/obj/
