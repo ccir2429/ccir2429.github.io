@@ -23,7 +23,7 @@ public record LyricsProcessResult(string Text, List<LyricsBlock> Blocks, int Add
 /// </summary>
 public static class LyricsFormatter
 {
-    public static LyricsProcessResult Process(string lyrics, string encoding = "unicode")
+    public static LyricsProcessResult Process(string lyrics, string encoding = "romanian")
     {
         var (blocks, _) = ParseLyrics(lyrics);
         ClassifyBlocks(blocks);
@@ -35,7 +35,7 @@ public static class LyricsFormatter
         int offset = 0;
         foreach (var b in placedBlocks)
         {
-            if (sb.Length > 0) { sb.Append("\n\n"); offset += 2; }
+            if (sb.Length > 0) { sb.Append("\n---\n"); offset += 5; }
             b.Start = offset;
             var text = string.Join('\n', b.Lines);
             if (encoding == "romanian") text = RomanianDiacriticsForDualDisplay(text);

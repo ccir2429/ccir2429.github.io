@@ -80,7 +80,7 @@
     void UpdateCounts()
     {
         _charCount = string.IsNullOrEmpty(Lyrics) ? 0 : Lyrics.Length;
-        _lineCount = string.IsNullOrEmpty(Lyrics) ? 0 : Lyrics.Split('\n').Length;
+        _lineCount = string.IsNullOrEmpty(Lyrics) ? 0 : Lyrics.Split("\n---").Length;
     }
 
     void LoadExample()
