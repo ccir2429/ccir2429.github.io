@@ -39,6 +39,14 @@
                   Spellcheck="false" aria-label="Lyrics" Placeholder="Paste the song lyrics here, choose an encoding, then press Process."
                   FullWidth="true" Class="mb-4" />
 
+    <MudExpansionPanels Class="mb-4">
+      <MudExpansionPanel Text="Custom corrections (optional)">
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">One per line, in the form word=cuvânt. Applied over the built-in dictionary.</MudText>
+        <MudTextField T="string" @bind-Value="CustomCorrections" Lines="5" Variant="Variant.Outlined" Spellcheck="false"
+                      aria-label="Custom corrections" Placeholder="lumina=lumină" FullWidth="true" />
+      </MudExpansionPanel>
+    </MudExpansionPanels>
+
     <MudStack Row="true" Spacing="4" Class="flex-wrap">
       <MudText Typo="Typo.body2">@_status</MudText>
       <MudText Typo="Typo.body2">Characters: <b>@_charCount</b></MudText>
@@ -53,6 +61,7 @@
     MudTextField<string> _textFieldRef = null!;
     string Lyrics;
     string Encoding = "romanian";
+    string CustomCorrections = string.Empty;
 
     List<LyricsBlock> _blocks = new();
     string _legend = "Select a section to find it in the text.";
@@ -128,7 +137,7 @@
             return;
         }
         undoStack.Add(Lyrics);
-        var res = LyricsFormatter.Process(Lyrics, Encoding);
+        var res = LyricsFormatter.Process(Lyrics, Encoding, ParseCustomCorrections());
         if (res.Empty)
         {
             _status = "Could not find any lyrics to process.";
@@ -140,6 +149,21 @@
         _status = res.Summary;
         UpdateCounts();
         StateHasChanged();
+    }
+
+    Dictionary<string, string>? ParseCustomCorrections()
+    {
+        if (string.IsNullOrWhiteSpace(CustomCorrections)) return null;
+        var map = new Dictionary<string, string>();
+        foreach (var line in CustomCorrections.Split('\n'))
+        {
+            var i = line.IndexOf('=');
+            if (i < 1) continue;
+            var key = line[..i].Trim();
+            var value = line[(i + 1)..].Trim();
+            if (key.Length > 0 && value.Length > 0) map[key] = value;
+        }
+        return map.Count > 0 ? map : null;
     }
 
     async Task SelectBlock(int index)

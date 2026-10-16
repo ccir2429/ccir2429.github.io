@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Diacritice pentru versuri</title>
+<style>
+:root{--bg:#faf8f4;--card:#fff;--text:#22201c;--muted:#6f6a60;--line:#ddd6c8;--accent:#8a5a2b;--accent-t:#fff;--mark:#f6e3b8;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1a1814;--card:#24211c;--text:#efe9dd;--muted:#a39b8b;--line:#3b362d;--accent:#d9a766;--accent-t:#1a1814;--mark:#5a4521;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#1a1814;--card:#24211c;--text:#efe9dd;--muted:#a39b8b;--line:#3b362d;--accent:#d9a766;--accent-t:#1a1814;--mark:#5a4521;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font:16px/1.55 Georgia,"Times New Roman",serif}
+main{max-width:1000px;margin:0 auto;padding:24px 16px 48px}
+h1{font-size:1.6rem;margin:0 0 4px}
+p.sub{color:var(--muted);margin:0 0 20px;font-family:system-ui,sans-serif;font-size:.9rem}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:720px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+label{display:block;font:600 .8rem system-ui,sans-serif;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+textarea,.out{width:100%;min-height:320px;border:1px solid var(--line);border-radius:8px;padding:12px;background:transparent;color:var(--text);font:inherit;resize:vertical}
+.out{white-space:pre-wrap;overflow:auto;max-height:520px}
+mark{background:var(--mark);color:inherit;border-radius:3px;padding:0 1px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px;font-family:system-ui,sans-serif}
+button{border:1px solid var(--line);background:transparent;color:var(--text);padding:9px 16px;border-radius:8px;font:600 .9rem system-ui,sans-serif;cursor:pointer}
+button.primary{background:var(--accent);color:var(--accent-t);border-color:var(--accent)}
+.stat{color:var(--muted);font-size:.85rem;margin-left:auto}
+details{margin-top:16px;font-family:system-ui,sans-serif}
+details summary{cursor:pointer;color:var(--muted);font-size:.9rem}
+details textarea{min-height:90px;margin-top:8px;font:14px/1.4 ui-monospace,monospace}
+</style>
+</head>
+<body>
+<main>
+  <h1>Diacritice pentru versuri</h1>
+  <p class="sub">Lipește versurile fără diacritice, apasă „Procesează" și primești textul cu ă, â, î, ș, ț.</p>
+  <div class="grid">
+    <div class="card">
+      <label for="inp">Text fără diacritice</label>
+      <textarea id="inp" placeholder="Lipește versurile aici..."></textarea>
+      <div class="bar">
+        <button class="primary" id="go">Procesează</button>
+        <button id="sample">Exemplu</button>
+        <button id="clear">Șterge</button>
+      </div>
+    </div>
+    <div class="card">
+      <label>Rezultat (cuvintele modificate sunt evidențiate)</label>
+      <div class="out" id="out" contenteditable="true" spellcheck="false"></div>
+      <div class="bar">
+        <button id="copy">Copiază</button>
+        <button id="hl">Ascunde evidențierea</button>
+        <span class="stat" id="stat"></span>
+      </div>
+    </div>
+  </div>
+  <details>
+    <summary>Corecturi personalizate (opțional)</summary>
+    <p style="color:var(--muted);font-size:.85rem;margin:8px 0 0">Câte una pe linie, în forma <code>cuvant=cuvânt</code>. Se aplică peste dicționar și se rețin în acest browser.</p>
+    <textarea id="custom" placeholder="lumina=lumină"></textarea>
+  </details>
+</main>
+<script>
+const strip = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[țţ]/g,'t').replace(/[șş]/g,'s').toLowerCase();
+
+const WORDS = `și în să că mă îmi îți își îl îi ție înainte înapoi între întru încă însă încât întâi întotdeauna întreg întreaga întregul încet început începe încep înțeles înțeleg înțelept înțelepciune înger îngeri îngerii îngerul îngerilor înviat înviere învie învățat învață învățător îndurare îndurat închinare închin închinăm închis închid încredere înălțime înălțat înălțăm înălțare înălț îngenuncheat îngenunchez împărat împărăție împărăția împărați împlinit împlinește împreună împotriva îmbrățișat îmbrăcat înconjurat întors întoarce întoarcere întorc întâlnit întâlnire întreabă întrebare întărit întărește întins întinde întristat întristare întuneric întunericul întunecat înflorit înflorește înfloresc înfrânt învins învinge învingător îndoială îndrăznesc îndreptat îngrijit îngădui înnoit înnoiește îndepărtat îngropat îmbie îndemn
+când cât către căci care cărui cărei cărora căreia fără după până așa acasă țara țară țări țărână mână mâna mâini mâinile viață viața vieți vieții cuvânt cuvântul cuvinte pământ pământul pământului sfânt sfântă sfinți sfinții sfântul gând gânduri gândesc gândești gândit rând rânduri vânt vântul stâncă stânca câmp câmpul câmpii câine mâine pâine pâinea plâng plâns plânge plângi plângem râd râde râs sânge sângele sângelui
+mântuire mântuit mântuiește mântuiesc mântuitor mântuitorul binecuvântat binecuvântare binecuvântez binecuvântează cânt cântăm cântați cântă cântare cântări cântec cântece cântând lăudat lăudăm lăudați slavă slăvit slăvesc slăvește mărire mărit măreț măreață măreție mărturie mărturisesc mărturisit mărturisire mulțumesc mulțumim mulțumit mulțumire mulțime puțin puține puțini puțină aștept aștepți așteaptă așteptăm așteptat
+păcat păcate păcatele păcătos păcătoși nădejde nădejdea iertare iartă rugăciune rugăciuni rugă rugăm credință credința credincios credincioși credincioșie frumusețe frumusețea frumoasă tărie păstor păstorul turmă turma răstignit răscumpărat răscumpărare răsplată răsărit răsare răsar răbdare răutate rău răi răni rană rămâne rămân rămas rămâi rămânem umblat umblăm umbră umbra urcă urmă urme urmează ură ușa ușă uși ușor ușurare vrăjmaș vrăjmași vrednic vrednică zâmbet zâmbește zăpadă
+lăcaș lăsat lasă las lași lângă lanț lanțuri legământ limbă limba limbi greșeală greșit greșesc grijă griji grăbit grădină grădina ființă ființa față fața fapte faptă faptele făcut făcător făptură făgăduință fântână frământat frânt frică frica frunză născut naște nașterea naștere născătoare neprihănit neprihănire nesfârșit nesfârșită nemărginit neînțeles odihnă odihna odihnit odihnește plăcut plăcere plătit poartă porți poruncă poruncit povară povățuiește
+sărac săraci sărăcie sărbătoare sărbători sărut sărutat sătul săgeată sămânță sănătate sănătos săvârșit sfârșit sfârșește sfat sfătuit târziu tânăr tăcere tăcut tămăduit tărâm trăiesc trăiește trăiești trăit trăim trăi trup trezit trudă tristețe ținut țin ține ții ținem țineți țesut adânc adâncul adâncuri adâncime adăpost adevăr adevărul adevărat adevărată alături alinat arătat arată arăți atâta atâți atâtea atât așezat așază bătut bat băut băiat băieți bărbat bărbați bătrân bătrâni brațe brațul brațele curând cuprins cunoscut dușman dușmani dușmanii dăruit dăruiește dăruiești dărui dăruire dăinuie deșert deșertul deșarte
+pași pașii păzit păzește păzesc păzi pătimit părăsit părăsesc păși pădure păduri păsări părinte părinți părintele părinții părți pătrunde patimă cădere căzut căutat căută căutăm căință călător călători călătorie căldură călăuză căi căile cărare cărări cărți mărgăritar mâhnit mâhnire mângâiere mângâi mângâiat mângâietor tău tăi toți toată veșmânt veșminte veșnic veșnică veșnicie șoapte șoaptă șoptesc șters șterge știință știu știi știe știm știți ești hotărât hotărâre hrănit hrană jertfă jertfa jertfit`;
+
+const BUILTIN = new Map();
+WORDS.split(/\s+/).filter(Boolean).forEach(w => { const k = strip(w); if (!BUILTIN.has(k)) BUILTIN.set(k, w); });
+
+const AFTER_CA = new Set(['eu','tu','el','ea','noi','voi','ei','ele','ai','am','au','a','ati','esti','este','sunt','suntem','nu','mi','ti','te','m','imi','iti','tot','te-ai','vei','voi','vom']);
+const NOT_ESTE = new Set(['este','peste','veste','aceste','poveste','oaste','ceste','teste','maestre','neste','deste']);
+
+function guess(w){
+  const n = w.length;
+  if (/esti$/.test(w) && n > 4) return w.slice(0,-4) + 'ești';
+  if (/este$/.test(w) && n >= 7 && !NOT_ESTE.has(w)) return w.slice(0,-4) + 'ește';
+  if (/tiune$/.test(w)) return w.slice(0,-6) + 'țiune';
+  if (/tiuni$/.test(w)) return w.slice(0,-5) + 'țiuni';
+  if (/[^s]tie$/.test(w)) return w.slice(0,-3) + 'ție';
+  if (/easca$/.test(w)) return w.slice(0,-5) + 'ească';
+  if (/ti$/.test(w) && !/^(anti|forti)$/.test(w)) return w.slice(0,-2) + 'ți';
+  if (/and$/.test(w) && n >= 5) return w.slice(0,-3) + 'ând';
+  return null;
+}
+
+function applyCase(src, out){
+  if (src.length > 1 && src === src.toUpperCase()) return out.toUpperCase();
+  if (src[0] === src[0].toUpperCase()) return out[0].toUpperCase() + out.slice(1);
+  return out;
+}
+
+function getCustom(){
+  const m = new Map();
+  document.getElementById('custom').value.split('\n').forEach(l => {
+    const i = l.indexOf('='); if (i < 1) return;
+    const a = strip(l.slice(0,i).trim()), b = l.slice(i+1).trim();
+    if (a && b) m.set(a, b);
+  });
+  return m;
+}
+
+const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+let plain = '';
+
+function process(){
+  const text = document.getElementById('inp').value;
+  const custom = getCustom();
+  let changed = 0, total = 0, html = '';
+  plain = '';
+  // split into words (ASCII letters) and everything else; keep line breaks intact
+  const parts = text.split(/([A-Za-z]+)/);
+  const words = parts.map((p,i) => i % 2 ? p : null);
+  for (let i = 0; i < parts.length; i++){
+    const p = parts[i];
+    if (i % 2 === 0){ html += esc(p); plain += p; continue; }
+    total++;
+    const k = p.toLowerCase();
+    let r = custom.get(k) || BUILTIN.get(k) || null;
+    if (!r && k === 'ca'){
+      // look at the next word for the "că + pronoun/verb" pattern
+      const nx = (parts[i+2] || '').toLowerCase();
+      if (AFTER_CA.has(nx)) r = 'că';
+    }
+    if (!r) r = guess(k);
+    if (r && r !== k){
+      const o = applyCase(p, r);
+      changed++; plain += o; html += '<mark>' + esc(o) + '</mark>';
+    } else { plain += p; html += esc(p); }
+  }
+  const out = document.getElementById('out');
+  out.innerHTML = html;
+  out.dataset.plain = '1';
+  document.getElementById('stat').textContent = changed + ' din ' + total + ' cuvinte modificate';
+}
+
+const $ = id => document.getElementById(id);
+$('go').onclick = process;
+$('clear').onclick = () => { $('inp').value=''; $('out').innerHTML=''; $('stat').textContent=''; };
+$('sample').onclick = () => { $('inp').value = "Doamne, tu esti lumina mea,\nin tine imi gasesc nadejdea.\nCand trandafirii infloresc,\ncant si te slavesc."; process(); };
+$('copy').onclick = async () => {
+  const t = $('out').innerText;
+  try { await navigator.clipboard.writeText(t); $('copy').textContent = 'Copiat ✓'; }
+  catch(e){ const r = document.createRange(); r.selectNodeContents($('out')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); document.execCommand('copy'); $('copy').textContent = 'Copiat ✓'; }
+  setTimeout(() => $('copy').textContent = 'Copiază', 1500);
+};
+let hlOn = true;
+$('hl').onclick = () => {
+  hlOn = !hlOn;
+  document.querySelectorAll('#out mark').forEach(m => m.style.background = hlOn ? '' : 'transparent');
+  $('hl').textContent = hlOn ? 'Ascunde evidențierea' : 'Arată evidențierea';
+};
+try { $('custom').value = localStorage.getItem('ro-custom') || ''; } catch(e){}
+$('custom').addEventListener('input', () => { try { localStorage.setItem('ro-custom', $('custom').value); } catch(e){} });
+</script>
+</body>
+</html>

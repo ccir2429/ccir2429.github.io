@@ -7,4 +7,10 @@
     <LangVersion>12.0</LangVersion>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Content Include="Diacritice pentru versuri.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

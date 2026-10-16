@@ -3,27 +3,13 @@ using System.Text.RegularExpressions;
 
 namespace LyricsFormatting;
 
-public enum BlockKind { Unknown, Verse, Chorus, Other }
-
-public class LyricsBlock
-{
-    public BlockKind Kind { get; set; } = BlockKind.Unknown;
-    public List<string> Lines { get; set; } = new();
-    public int Start { get; set; }
-    public int End { get; set; }
-    public bool Added { get; set; }
-    public string? Key { get; set; }
-}
-
-public record LyricsProcessResult(string Text, List<LyricsBlock> Blocks, int Added, string Summary, bool Empty);
-
 /// <summary>
 /// Pure, reusable lyrics formatting logic (parsing, classifying verses/choruses, and
 /// auto-inserting choruses after each verse) extracted so it can be shared across apps.
 /// </summary>
 public static class LyricsFormatter
 {
-    public static LyricsProcessResult Process(string lyrics, string encoding = "romanian")
+    public static LyricsProcessResult Process(string lyrics, string encoding = "romanian", IReadOnlyDictionary<string, string>? customCorrections = null)
     {
         var (blocks, _) = ParseLyrics(lyrics);
         ClassifyBlocks(blocks);
@@ -38,7 +24,8 @@ public static class LyricsFormatter
             if (sb.Length > 0) { sb.Append("\n---\n"); offset += 5; }
             b.Start = offset;
             var text = string.Join('\n', b.Lines);
-            if (encoding == "romanian") text = RomanianDiacriticsForDualDisplay(text);
+            if (encoding == "romanian")
+                text = RomanianDiacriticsForDualDisplay(RomanianDiacriticsRestorer.Restore(text, customCorrections));
             sb.Append(text);
             offset += text.Length;
             b.End = offset;
