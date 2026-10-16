@@ -1,3 +1,4 @@
 <Solution>
+  <Project Path="LyricsFormatting/LyricsFormatting.csproj" />
   <Project Path="timestamp-blazor/TimestampBlazor.csproj" />
 </Solution>

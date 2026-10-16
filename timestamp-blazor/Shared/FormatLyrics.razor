@@ -1,63 +1,60 @@
 @inject IJSRuntime JS
+@using LyricsFormatting
 
-<div class="app">
-  <header class="top">
-    <h1 class="brand">Lyrics formatter</h1>
-    <span class="spacer"></span>
-    <button class="btn ghost" @onclick="LoadExample">Load example</button>
-    <button class="btn ghost" disabled="@(!UndoAvailable)" @onclick="Undo">Undo</button>
-    <button class="btn ghost" @onclick="Clear">Clear</button>
-  </header>
+<MudContainer MaxWidth="MaxWidth.Large" Class="pa-4">
+  <MudPaper Elevation="0" Class="d-flex align-center ga-2 mb-4" Style="background:transparent;">
+    <MudText Typo="Typo.h4" Class="mr-auto">Lyrics formatter</MudText>
+    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.PlaylistAdd" OnClick="LoadExample">Load example</MudButton>
+    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Undo" Disabled="@(!UndoAvailable)" OnClick="Undo">Undo</MudButton>
+    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Clear" OnClick="Clear">Clear</MudButton>
+  </MudPaper>
 
-  <section class="work">
-    <div class="controls">
-      <label for="enc">Encoding</label>
-      <select class="field" id="enc" @bind="Encoding" aria-label="Encoding">
-        <option value="unicode">Unicode (UTF-8)</option>
-        <option value="romanian">Romanian (diacritics for DualDisplay)</option>
-        <option value="latin1">ISO-8859-1</option>
-      </select>
-      <button class="btn primary" @onclick="OnProcess">Process</button>
-      <button class="btn" @onclick="OnCopy">Copy</button>
-    </div>
+  <MudPaper Elevation="2" Class="pa-4">
+    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="mb-4 flex-wrap">
+      <MudSelect T="string" @bind-Value="Encoding" Label="Encoding" Variant="Variant.Outlined" Dense="true" Style="min-width:260px;">
+        <MudSelectItem T="string" Value="@("unicode")">Unicode (UTF-8)</MudSelectItem>
+        <MudSelectItem T="string" Value="@("romanian")">Romanian (diacritics for DualDisplay)</MudSelectItem>
+        <MudSelectItem T="string" Value="@("latin1")">ISO-8859-1</MudSelectItem>
+      </MudSelect>
+      <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AutoFixHigh" OnClick="OnProcess">Process</MudButton>
+      <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick="OnCopy">Copy</MudButton>
+    </MudStack>
 
-    <div class="structure">
-      <div class="chips" role="group" aria-label="Song structure">
+    <MudStack Class="mb-2">
+      <MudStack Row="true" Spacing="1" Class="flex-wrap" aria-label="Song structure">
         @{ var verseCounter = 0; }
         @for (int i = 0; i < _blocks.Count; i++)
         {
-          var b = _blocks[i];
-          <button type="button" class="@CssClass(b)" @onclick="() => SelectBlock(i)">
+          var idx = i;
+          var b = _blocks[idx];
+          <MudChip T="string" Color="@ChipColor(b)" Variant="@(b.Added ? Variant.Outlined : Variant.Filled)" OnClick="@(() => SelectBlock(idx))">
             @(b.Kind == BlockKind.Verse ? $"Verse {++verseCounter}" : b.Kind == BlockKind.Chorus ? "Chorus" : "Section")
-          </button>
+          </MudChip>
         }
-      </div>
-      <p class="legend">@_legend</p>
-    </div>
+      </MudStack>
+      <MudText Typo="Typo.body2" Color="Color.Secondary">@_legend</MudText>
+    </MudStack>
 
-    <div class="ed-wrap">
-      <textarea @ref="_textRef" value="@Lyrics" @oninput="OnLyricsInput" spellcheck="false" aria-label="Lyrics" placeholder="Paste the song lyrics here, choose an encoding, then press Process."></textarea>
-    </div>
+    <MudTextField @ref="_textFieldRef" T="string" Value="@Lyrics" ValueChanged="OnLyricsChanged" Lines="16" Variant="Variant.Outlined"
+                  Spellcheck="false" aria-label="Lyrics" Placeholder="Paste the song lyrics here, choose an encoding, then press Process."
+                  FullWidth="true" Class="mb-4" />
 
-    <div class="status">
-      <span class="note">@_status</span>
-      <span class="stat">Characters: <b>@_charCount</b></span>
-      <span class="stat">Lines: <b>@_lineCount</b></span>
-    </div>
-  </section>
-</div>
+    <MudStack Row="true" Spacing="4" Class="flex-wrap">
+      <MudText Typo="Typo.body2">@_status</MudText>
+      <MudText Typo="Typo.body2">Characters: <b>@_charCount</b></MudText>
+      <MudText Typo="Typo.body2">Lines: <b>@_lineCount</b></MudText>
+    </MudStack>
+  </MudPaper>
+</MudContainer>
 
 @code {
     [Parameter] public string InitialLyrics { get; set; }
 
-    enum BlockKind { Unknown, Verse, Chorus, Other }
-    class Block { public BlockKind Kind = BlockKind.Unknown; public List<string> Lines = new(); public int Start; public int End; public bool Added; public string Key; }
-
-    ElementReference _textRef;
+    MudTextField<string> _textFieldRef = null!;
     string Lyrics;
-    string Encoding = "unicode";
+    string Encoding = "romanian";
 
-    List<Block> _blocks = new();
+    List<LyricsBlock> _blocks = new();
     string _legend = "Select a section to find it in the text.";
     string _status = string.Empty;
     int _charCount = 0;
@@ -65,7 +62,6 @@
 
     readonly List<string> undoStack = new();
     bool UndoAvailable => undoStack.Count > 0;
-    int _tempVerseCounter = 0;
 
     protected override void OnInitialized()
     {
@@ -73,22 +69,12 @@
         UpdateCounts();
     }
 
-    void OnLyricsInput(ChangeEventArgs args)
+    void OnLyricsChanged(string value)
     {
-        Lyrics = args.Value?.ToString() ?? string.Empty;
+        Lyrics = value ?? string.Empty;
         _blocks.Clear();
         _legend = "Select a section to find it in the text.";
         UpdateCounts();
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            // tiny helper for selecting range and scrolling
-            var js = @"window.formatLyricsSelect = (el, start, end) => { try { el.focus(); el.setSelectionRange(start, end); const ratio = start / Math.max(1, el.value.length); el.scrollTop = Math.max(0, ratio * el.scrollHeight - el.clientHeight * 0.35); } catch(e){} };";
-            await JS.InvokeVoidAsync("eval", js);
-        }
     }
 
     void UpdateCounts()
@@ -142,7 +128,7 @@
             return;
         }
         undoStack.Add(Lyrics);
-        var res = ProcessText(Lyrics, Encoding);
+        var res = LyricsFormatter.Process(Lyrics, Encoding);
         if (res.Empty)
         {
             _status = "Could not find any lyrics to process.";
@@ -156,201 +142,18 @@
         StateHasChanged();
     }
 
-    record ProcessResult(string Text, List<Block> Blocks, int Added, string Summary, bool Empty);
-
-    ProcessResult ProcessText(string lyrics, string enc)
-    {
-        // simple port of the original algorithm: parse, classify, place chorus
-        var parsed = ParseLyrics(lyrics);
-        var src = parsed.Blocks;
-        ClassifyBlocks(src);
-        var nVerses = src.Count(b => b.Kind == BlockKind.Verse);
-        var nChorus = src.Count(b => b.Kind == BlockKind.Chorus);
-        var placed = PlaceChorus(src);
-
-        var sb = new System.Text.StringBuilder();
-        int offset = 0;
-        foreach (var b in placed.Blocks)
-        {
-            if (sb.Length > 0) { sb.Append("\n\n"); offset += 2; }
-            b.Start = offset;
-            var text = string.Join('\n', b.Lines);
-            if (enc == "romanian") text = RomanianDiacriticsForDualDisplay(text);
-            sb.Append(text);
-            offset += text.Length;
-            b.End = offset;
-        }
-
-        string summary;
-        if (nVerses == 0 && nChorus == 0) summary = "No verses or chorus detected.";
-        else
-        {
-            summary = $"Found {nVerses} {(nVerses==1?"verse":"verses")}{(nChorus>0?" and "+nChorus+" chorus(es)":"")}.";
-            if (nChorus==0) summary += " No chorus was detected. Label it Refren or Chorus, or repeat it, so it can follow each verse.";
-            else if (placed.Added>0) summary += $" Added the chorus after {placed.Added} {(placed.Added==1?"verse":"verses")}.";
-            else summary += " The chorus already follows every verse, so none was added.";
-        }
-
-        var textOut = sb.ToString();
-        return new ProcessResult(textOut, placed.Blocks, placed.Added, summary, placed.Blocks.Count == 0);
-    }
-
-    (List<Block> Blocks, int Added) PlaceChorus(List<Block> blocks)
-    {
-        var first = blocks.FirstOrDefault(b => b.Kind == BlockKind.Chorus);
-        var outBlocks = new List<Block>();
-        Block current = null; int added = 0;
-        for (int i = 0; i < blocks.Count; i++)
-        {
-            var b = blocks[i];
-            outBlocks.Add(b);
-            if (b.Kind == BlockKind.Chorus) current = b;
-            if (b.Kind == BlockKind.Verse)
-            {
-                var next = i+1 < blocks.Count ? blocks[i+1] : null;
-                if (next != null && next.Kind == BlockKind.Chorus) continue;
-                var ch = current ?? first;
-                if (ch != null)
-                {
-                    var copy = new Block { Kind = BlockKind.Chorus, Lines = new List<string>(ch.Lines), Added = true };
-                    outBlocks.Add(copy);
-                    added++;
-                }
-            }
-        }
-        return (outBlocks, added);
-    }
-
-    void ClassifyBlocks(List<Block> blocks)
-    {
-        var V = blocks.Count(b => b.Kind == BlockKind.Verse);
-        var C = blocks.Count(b => b.Kind == BlockKind.Chorus);
-        var un = blocks.Where(b => b.Kind == BlockKind.Unknown).ToList();
-        if (!un.Any()) return;
-        if (V > 0 && C == 0) { foreach (var b in un) b.Kind = BlockKind.Chorus; }
-        else if (V > 0 || C > 0) { foreach (var b in un) b.Kind = BlockKind.Verse; }
-        else
-        {
-            var count = new Dictionary<string,int>();
-            foreach (var b in blocks)
-            {
-                b.Key = string.Join(' ', b.Lines).ToLowerInvariant();
-                count[b.Key] = count.GetValueOrDefault(b.Key) + 1;
-            }
-            foreach (var b in un) b.Kind = (!string.IsNullOrEmpty(b.Key) && count[b.Key] > 1) ? BlockKind.Chorus : BlockKind.Verse;
-        }
-    }
-
-    (List<Block> Blocks, int LabelsRemoved) ParseLyrics(string raw)
-    {
-        var lines = raw.Replace("\r\n", "\n").Replace("\r", "\n").Split('\n');
-        var groups = new List<List<string>>();
-        var cur = new List<string>();
-        foreach (var l in lines)
-        {
-            if (string.IsNullOrWhiteSpace(l) || System.Text.RegularExpressions.Regex.IsMatch(l, "^\\s*[-\u2013\u2014_=*]{3,}\\s*$"))
-            {
-                if (cur.Count > 0) { groups.Add(cur); cur = new List<string>(); }
-            }
-            else
-            {
-                cur.Add(l.Trim().Replace("\t"," ").Replace("  ", " "));
-            }
-        }
-        if (cur.Count > 0) groups.Add(cur);
-
-        var blocks = new List<Block>();
-        int labelsRemoved = 0;
-        foreach (var g in groups)
-        {
-            var gg = new List<string>(g);
-            BlockKind? kind = null;
-            if (gg.Count >= 2 && gg.All(l => System.Text.RegularExpressions.Regex.IsMatch(l, "^\\d{1,2}\\s*[.):\\-\\u2013]\\s*(?!\\d)")))
-            {
-                gg = gg.Select(l => System.Text.RegularExpressions.Regex.Replace(l, "^\\d{1,2}\\s*[.):\\-\\u2013]\\s*", "")).Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
-                labelsRemoved += gg.Count;
-                kind = BlockKind.Verse;
-            }
-            else
-            {
-                var lab = DetectLabel(gg[0]);
-                if (lab != null)
-                {
-                    kind = lab.Value.kind;
-                    labelsRemoved++;
-                    if (!string.IsNullOrEmpty(lab.Value.rest)) gg[0] = lab.Value.rest; else gg.RemoveAt(0);
-                }
-            }
-            if (!gg.Any()) continue;
-            blocks.Add(new Block { Kind = kind ?? BlockKind.Unknown, Lines = gg });
-        }
-
-        return (blocks, labelsRemoved);
-    }
-
-    (BlockKind kind, string rest)? DetectLabel(string line)
-    {
-        line = line.Trim();
-        var RE_BRACKET = new System.Text.RegularExpressions.Regex("^[\\[(]\\s*([^\\])]{1,24}?)\\s*[\\])]\\s*(.*)$", System.Text.RegularExpressions.RegexOptions.Compiled);
-        var m = RE_BRACKET.Match(line);
-        if (m.Success)
-        {
-            var inner = m.Groups[1].Value;
-            var k = ClassifyInner(inner);
-            if (k != null) return (k.Value, m.Groups[2].Value.Trim());
-        }
-        if (System.Text.RegularExpressions.Regex.IsMatch(line, "^(?:refren(?:ul)?|chorus)\\b\\s*\\d{0,2}", System.Text.RegularExpressions.RegexOptions.IgnoreCase)) return (BlockKind.Chorus, RemovePrefix(line));
-        if (System.Text.RegularExpressions.Regex.IsMatch(line, "^(?:bridge|pod|punte|interludiu|interlude|intro|outro)\\s*\\d{0,2}", System.Text.RegularExpressions.RegexOptions.IgnoreCase)) return (BlockKind.Other, RemovePrefix(line));
-        if (System.Text.RegularExpressions.Regex.IsMatch(line, "^(?:strofa|strof\\u0103|verse|vers)\\s*\\d{1,2}", System.Text.RegularExpressions.RegexOptions.IgnoreCase)) return (BlockKind.Verse, RemovePrefix(line));
-        if (System.Text.RegularExpressions.Regex.IsMatch(line, "^v\\s*\\d{1,2}", System.Text.RegularExpressions.RegexOptions.IgnoreCase)) return (BlockKind.Verse, RemovePrefix(line));
-        if (System.Text.RegularExpressions.Regex.IsMatch(line, "^\\d{1,2}\\s*[.):\\-\\u2013]\\s*(?!\\d)")) return (BlockKind.Verse, RemovePrefix(line));
-        if (System.Text.RegularExpressions.Regex.IsMatch(line, "^\\d{1,2}$")) return (BlockKind.Verse, RemovePrefix(line));
-        return null;
-    }
-
-    BlockKind? ClassifyInner(string inner)
-    {
-        if (System.Text.RegularExpressions.Regex.IsMatch(inner, "^(?:refren(?:ul)?|chorus|cor|ref|r)\\s*\\d{0,2}(?:\\s*x\\s*\\d+)?$", System.Text.RegularExpressions.RegexOptions.IgnoreCase)) return BlockKind.Chorus;
-        if (System.Text.RegularExpressions.Regex.IsMatch(inner, "^(?:(?:strofa|strof\\u0103|verse|vers|v)\\s*)?\\d{1,2}$", System.Text.RegularExpressions.RegexOptions.IgnoreCase)) return BlockKind.Verse;
-        if (System.Text.RegularExpressions.Regex.IsMatch(inner, "^(?:bridge|pod|punte|interludiu|interlude|intro|outro)\\s*\\d{0,2}$", System.Text.RegularExpressions.RegexOptions.IgnoreCase)) return BlockKind.Other;
-        return null;
-    }
-
-    string RemovePrefix(string line)
-    {
-        // remove leading label like "Chorus:" or "1." keeping rest
-        var idx = line.IndexOfAny(new char[]{':', '.', ')', '-', '\u2013'});
-        if (idx >= 0 && idx < 6) return line.Substring(idx+1).Trim();
-        // fallback: remove known words
-        line = System.Text.RegularExpressions.Regex.Replace(line, "^(?:refren(?:ul)?|chorus|cor|ref|r|strofa|strof\\u0103|verse|vers|v|intro|outro|bridge)\\b\\s*\\d{0,2}[:.)\\-\\u2013]?\\s*", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        return line.Trim();
-    }
-
-    string RomanianDiacriticsForDualDisplay(string s)
-    {
-        var map = new Dictionary<char,char>(){
-            {'ă','ă'},{'Ă','Ă'},{'â','â'},{'Â','Â'},{'ș','ş'},{'Ș','Ş'},{'ş','ş'},{'Ş','Ş'},{'ț','ţ'},{'Ț','Ţ'},{'ţ','ţ'},{'Ţ','Ţ'}
-        };
-        var sb = new System.Text.StringBuilder(s.Length);
-        foreach (var ch in s)
-        {
-            if (map.TryGetValue(ch, out var r)) sb.Append(r); else sb.Append(ch);
-        }
-        return sb.ToString();
-    }
-
-    void SelectBlock(int index)
+    async Task SelectBlock(int index)
     {
         if (index < 0 || index >= _blocks.Count) return;
         var blk = _blocks[index];
-        // call small JS helper to set selection and scroll
-        JS.InvokeVoidAsync("formatLyricsSelect", _textRef, blk.Start, blk.End);
+        await _textFieldRef.FocusAsync();
+        await _textFieldRef.SelectRangeAsync(blk.Start, blk.End);
     }
 
-    string CssClass(Block block)
+    Color ChipColor(LyricsBlock block) => block.Kind switch
     {
-        var kind = block.Kind == BlockKind.Verse ? "verse" : block.Kind == BlockKind.Chorus ? "chorus" : "other";
-        return $"chip {kind}{(block.Added ? " added" : string.Empty)}";
-    }
-
+        BlockKind.Verse => Color.Primary,
+        BlockKind.Chorus => Color.Secondary,
+        _ => Color.Default
+    };
 }
